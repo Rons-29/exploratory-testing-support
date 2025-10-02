@@ -1,0 +1,82 @@
+name: Documentation Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install markdownlint
+      run: npm install -g markdownlint-cli
+      
+    - name: Lint markdown files
+      run: markdownlint "*.md" "docs/**/*.md" || true
+      
+    - name: Check for broken links
+      run: |
+        # Install link checker
+        npm install -g markdown-link-check
+        
+        # Check links in all markdown files
+        find . -name "*.md" -not -path "./node_modules/*" -exec markdown-link-check {} \; || true
+        
+    - name: Validate document structure
+      run: |
+        echo "Checking document structure..."
+        
+        # Check if required documents exist
+        required_docs=(
+          "00_プロジェクトサマリー.md"
+          "01_プロジェクト概要書.md"
+          "02_要件定義書.md"
+          "03_UI_UX設計仕様書.md"
+          "04_技術仕様書.md"
+          "05_API設計書.md"
+          "06_セキュリティ仕様書.md"
+          "07_開発ロードマップ.md"
+        )
+        
+        for doc in "${required_docs[@]}"; do
+          if [ ! -f "$doc" ]; then
+            echo "❌ Missing required document: $doc"
+            exit 1
+          else
+            echo "✅ Found: $doc"
+          fi
+        done
+        
+        echo "✅ All required documents are present"
+        
+    - name: Generate documentation summary
+      run: |
+        echo "# Documentation Status" > doc-status.md
+        echo "" >> doc-status.md
+        echo "Last updated: $(date)" >> doc-status.md
+        echo "" >> doc-status.md
+        echo "## Document Status" >> doc-status.md
+        echo "" >> doc-status.md
+        
+        for file in *.md; do
+          if [ "$file" != "doc-status.md" ] && [ "$file" != "README.md" ]; then
+            echo "- ✅ $file" >> doc-status.md
+          fi
+        done
+        
+    - name: Upload documentation status
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation-status
+        path: doc-status.md

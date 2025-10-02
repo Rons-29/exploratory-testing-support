@@ -1,0 +1,28 @@
+# Global owners
+* @Rons-29
+
+# Documentation
+*.md @Rons-29
+
+# GitHub workflows
+.github/ @Rons-29
+
+# Configuration files
+package.json @Rons-29
+package-lock.json @Rons-29
+tsconfig.json @Rons-29
+.eslintrc.* @Rons-29
+.prettierrc.* @Rons-29
+.editorconfig @Rons-29
+
+# Chrome extension
+manifest.json @Rons-29
+src/ @Rons-29
+
+# Backend
+api/ @Rons-29
+server/ @Rons-29
+
+# Database
+migrations/ @Rons-29
+schema/ @Rons-29

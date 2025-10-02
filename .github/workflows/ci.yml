@@ -54,6 +54,7 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
+    # このジョブは必須ステータスとして設定される
     
     steps:
     - name: Checkout code
@@ -66,9 +67,20 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
         
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+        
+    - name: Fail on critical vulnerabilities
+      run: |
+        if [ -f trivy-results.sarif ]; then
+          # クリティカルな脆弱性がある場合は失敗
+          if grep -q '"level":"error"' trivy-results.sarif; then
+            echo "Critical vulnerabilities found!"
+            exit 1
+          fi
+        fi

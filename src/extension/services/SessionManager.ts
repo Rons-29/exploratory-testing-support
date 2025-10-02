@@ -115,19 +115,21 @@ export class SessionManager {
     return screenshotId;
   }
 
-  public async addFlag(eventId: string, note: string): Promise<void> {
+  public async addFlag(eventId: string, note: string): Promise<string> {
     if (!this.currentSession || this.currentSession.status !== SessionStatus.ACTIVE) {
       throw new Error('No active session');
     }
 
+    const flagId = this.generateFlagId();
     this.currentSession.flags.push({
-      id: this.generateFlagId(),
+      id: flagId,
       eventId,
       note,
       timestamp: new Date().toISOString()
     });
 
     await this.saveSessionToStorage();
+    return flagId;
   }
 
   public async getSessionStats(): Promise<{

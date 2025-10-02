@@ -12,31 +12,10 @@ export interface SessionData {
   status: SessionStatus;
   startTime: Date;
   endTime: Date | null;
-  events: EventData[];
-  screenshots: ScreenshotData[];
-  flags: FlagData[];
+  events: any[];
+  screenshots: any[];
+  flags: any[];
   metadata: SessionMetadata;
-}
-
-export interface EventData {
-  id: string;
-  type: string;
-  timestamp: string;
-  data: any;
-}
-
-export interface ScreenshotData {
-  id: string;
-  data: string; // base64 encoded image data
-  timestamp: string;
-  url: string;
-}
-
-export interface FlagData {
-  id: string;
-  eventId: string;
-  note: string;
-  timestamp: string;
 }
 
 export interface SessionMetadata {

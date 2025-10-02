@@ -190,7 +190,7 @@ export class EventTracker {
     }
   }
 
-  private async flushEvents(): Promise<void> {
+  public async flushEvents(): Promise<void> {
     if (this.eventBuffer.length === 0) return;
 
     const eventsToFlush = [...this.eventBuffer];

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIテストパートナー</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>AIテストパートナー</h1>
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot inactive"></span>
+        <span class="status-text">停止中</span>
+      </div>
+    </header>
+
+    <main class="popup-main">
+      <div class="session-controls">
+        <button id="toggleSession" class="btn btn-primary">
+          <span class="btn-icon">▶</span>
+          <span class="btn-text">テスト開始</span>
+        </button>
+        
+        <div class="session-info" id="sessionInfo" style="display: none;">
+          <p class="session-id">セッションID: <span id="sessionId">-</span></p>
+          <p class="session-duration">経過時間: <span id="sessionDuration">00:00:00</span></p>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <button id="takeScreenshot" class="btn btn-secondary" disabled>
+          <span class="btn-icon">📷</span>
+          <span class="btn-text">スクリーンショット</span>
+        </button>
+        
+        <button id="viewLogs" class="btn btn-secondary" disabled>
+          <span class="btn-icon">📋</span>
+          <span class="btn-text">ログ確認</span>
+        </button>
+        
+        <button id="exportReport" class="btn btn-secondary" disabled>
+          <span class="btn-icon">📄</span>
+          <span class="btn-text">レポート出力</span>
+        </button>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="stat-item">
+          <span class="stat-label">記録イベント数</span>
+          <span class="stat-value" id="eventCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">エラー数</span>
+          <span class="stat-value" id="errorCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">スクリーンショット数</span>
+          <span class="stat-value" id="screenshotCount">0</span>
+        </div>
+      </div>
+    </main>
+
+    <footer class="popup-footer">
+      <div class="settings-link">
+        <a href="#" id="openSettings">設定</a>
+      </div>
+      <div class="version-info">
+        v1.0.0
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

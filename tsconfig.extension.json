@@ -2,26 +2,27 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "ES2020",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "outDir": "./dist/backend",
+    "outDir": "./dist/extension",
     "rootDir": "./src",
     "noEmit": false,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
-    "typeRoots": ["./node_modules/@types", "./src/shared/types"]
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["chrome"]
   },
   "include": [
-    "src/backend/**/*",
+    "src/extension/**/*",
     "src/shared/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "src/extension",
+    "src/backend",
     "**/*.test.ts",
     "**/*.spec.ts"
   ]

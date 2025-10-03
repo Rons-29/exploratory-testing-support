@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AIテストパートナー",
+  "name": "探索的テスト支援",
   "version": "1.0.0",
   "description": "探索的テスト支援サービス - 操作ログの自動記録とレポート生成",
   "permissions": [
@@ -18,31 +18,39 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_start"
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_end"
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "AIテストパートナー",
+    "default_title": "探索的テスト支援",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/icon16.svg",
+      "32": "icons/icon32.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/icon16.svg",
+    "32": "icons/icon32.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
   },
   "web_accessible_resources": [
     {
-      "resources": ["floating-button.html"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "floating-button.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

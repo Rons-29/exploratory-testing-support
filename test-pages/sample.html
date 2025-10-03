@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拡張機能テスト用ページ</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button, input, select, textarea {
+            margin: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log-area {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 探索的テスト支援拡張機能 - テストページ</h1>
+    
+    <div class="status success">
+        <strong>✅ 拡張機能が正常に読み込まれています</strong><br>
+        このページで拡張機能の各種機能をテストできます。
+    </div>
+
+    <div class="test-section">
+        <h3>🖱️ クリックイベントテスト</h3>
+        <p>以下のボタンをクリックして、クリックイベントが正しく追跡されるかテストしてください。</p>
+        <button id="primary-btn" class="btn-primary">プライマリボタン</button>
+        <button id="secondary-btn" class="btn-secondary">セカンダリボタン</button>
+        <button id="danger-btn" class="btn-danger">危険ボタン</button>
+        <button id="success-btn" class="btn-success">成功ボタン</button>
+    </div>
+
+    <div class="test-section">
+        <h3>⌨️ キーボードイベントテスト</h3>
+        <p>以下の入力フィールドでキーボードイベントをテストしてください。</p>
+        <input id="text-input" type="text" placeholder="テキストを入力してください">
+        <input id="email-input" type="email" placeholder="メールアドレスを入力してください">
+        <input id="password-input" type="password" placeholder="パスワードを入力してください">
+        <textarea id="textarea-input" placeholder="複数行のテキストを入力してください" rows="3"></textarea>
+    </div>
+
+    <div class="test-section">
+        <h3>🎯 フォーカスイベントテスト</h3>
+        <p>以下の要素にフォーカスを当てて、フォーカスイベントをテストしてください。</p>
+        <select id="select-input">
+            <option value="">選択してください</option>
+            <option value="option1">オプション1</option>
+            <option value="option2">オプション2</option>
+            <option value="option3">オプション3</option>
+        </select>
+        <input id="checkbox-input" type="checkbox"> チェックボックス
+        <input id="radio-input" type="radio" name="radio-group"> ラジオボタン
+    </div>
+
+    <div class="test-section">
+        <h3>🖼️ マウスイベントテスト</h3>
+        <p>以下の領域でマウス移動やホバーイベントをテストしてください。</p>
+        <div id="mouse-area" style="width: 100%; height: 100px; background-color: #f0f0f0; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+            マウスをここで動かしてください
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📝 コンソールログテスト</h3>
+        <p>以下のボタンをクリックして、コンソールログが正しく追跡されるかテストしてください。</p>
+        <button id="log-info">Info ログ</button>
+        <button id="log-warn">Warning ログ</button>
+        <button id="log-error">Error ログ</button>
+        <button id="log-debug">Debug ログ</button>
+    </div>
+
+    <div class="test-section">
+        <h3>🌐 ネットワークエラーテスト</h3>
+        <p>以下のボタンをクリックして、ネットワークエラーが正しく追跡されるかテストしてください。</p>
+        <button id="network-success">成功リクエスト</button>
+        <button id="network-error">エラーリクエスト</button>
+        <button id="network-timeout">タイムアウトリクエスト</button>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 テストログ</h3>
+        <p>以下のエリアにテスト結果が表示されます。</p>
+        <div id="log-area" class="log-area"></div>
+        <button id="clear-log">ログをクリア</button>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 拡張機能の状態確認</h3>
+        <p>拡張機能の現在の状態を確認できます。</p>
+        <button id="check-extension">拡張機能状態を確認</button>
+        <div id="extension-status"></div>
+    </div>
+
+    <script>
+        // ログ表示用の関数
+        function addLog(message, type = 'info') {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span style="color: ${type === 'error' ? '#d63384' : type === 'warn' ? '#fd7e14' : '#0d6efd'};">[${type.toUpperCase()}]</span> ${message}`;
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // イベントリスナーの設定
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('ページが読み込まれました', 'info');
+
+            // クリックイベント
+            document.getElementById('primary-btn').addEventListener('click', () => {
+                addLog('プライマリボタンがクリックされました', 'info');
+            });
+
+            document.getElementById('secondary-btn').addEventListener('click', () => {
+                addLog('セカンダリボタンがクリックされました', 'info');
+            });
+
+            document.getElementById('danger-btn').addEventListener('click', () => {
+                addLog('危険ボタンがクリックされました', 'warn');
+            });
+
+            document.getElementById('success-btn').addEventListener('click', () => {
+                addLog('成功ボタンがクリックされました', 'info');
+            });
+
+            // キーボードイベント
+            const textInput = document.getElementById('text-input');
+            textInput.addEventListener('input', (e) => {
+                addLog(`テキスト入力: ${e.target.value}`, 'info');
+            });
+
+            textInput.addEventListener('keydown', (e) => {
+                addLog(`キーダウン: ${e.key}`, 'info');
+            });
+
+            // フォーカスイベント
+            const focusElements = ['text-input', 'email-input', 'password-input', 'textarea-input', 'select-input'];
+            focusElements.forEach(id => {
+                const element = document.getElementById(id);
+                element.addEventListener('focus', () => {
+                    addLog(`${id} にフォーカスしました`, 'info');
+                });
+                element.addEventListener('blur', () => {
+                    addLog(`${id} からフォーカスが外れました`, 'info');
+                });
+            });
+
+            // マウスイベント
+            const mouseArea = document.getElementById('mouse-area');
+            mouseArea.addEventListener('mousemove', (e) => {
+                addLog(`マウス移動: (${e.clientX}, ${e.clientY})`, 'info');
+            });
+
+            mouseArea.addEventListener('mouseenter', () => {
+                addLog('マウスエリアに入りました', 'info');
+            });
+
+            mouseArea.addEventListener('mouseleave', () => {
+                addLog('マウスエリアから出ました', 'info');
+            });
+
+            // コンソールログテスト
+            document.getElementById('log-info').addEventListener('click', () => {
+                console.log('これはInfoレベルのログです');
+                addLog('Infoログを出力しました', 'info');
+            });
+
+            document.getElementById('log-warn').addEventListener('click', () => {
+                console.warn('これはWarningレベルのログです');
+                addLog('Warningログを出力しました', 'warn');
+            });
+
+            document.getElementById('log-error').addEventListener('click', () => {
+                console.error('これはErrorレベルのログです');
+                addLog('Errorログを出力しました', 'error');
+            });
+
+            document.getElementById('log-debug').addEventListener('click', () => {
+                console.debug('これはDebugレベルのログです');
+                addLog('Debugログを出力しました', 'info');
+            });
+
+            // ネットワークテスト
+            document.getElementById('network-success').addEventListener('click', async () => {
+                try {
+                    const response = await fetch('https://httpbin.org/status/200');
+                    addLog('ネットワークリクエスト成功', 'info');
+                } catch (error) {
+                    addLog(`ネットワークエラー: ${error.message}`, 'error');
+                }
+            });
+
+            document.getElementById('network-error').addEventListener('click', async () => {
+                try {
+                    const response = await fetch('https://httpbin.org/status/500');
+                    addLog('ネットワークエラーリクエスト送信', 'warn');
+                } catch (error) {
+                    addLog(`ネットワークエラー: ${error.message}`, 'error');
+                }
+            });
+
+            document.getElementById('network-timeout').addEventListener('click', async () => {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1000);
+                    const response = await fetch('https://httpbin.org/delay/5', {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                } catch (error) {
+                    addLog(`ネットワークタイムアウト: ${error.message}`, 'error');
+                }
+            });
+
+            // ログクリア
+            document.getElementById('clear-log').addEventListener('click', () => {
+                document.getElementById('log-area').innerHTML = '';
+                addLog('ログをクリアしました', 'info');
+            });
+
+            // 拡張機能状態確認
+            document.getElementById('check-extension').addEventListener('click', () => {
+                const statusDiv = document.getElementById('extension-status');
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    statusDiv.innerHTML = '<div class="status success">✅ 拡張機能APIが利用可能です</div>';
+                    addLog('拡張機能APIが利用可能です', 'info');
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ 拡張機能APIが利用できません</div>';
+                    addLog('拡張機能APIが利用できません', 'error');
+                }
+            });
+
+            // ページアンロード時の処理
+            window.addEventListener('beforeunload', () => {
+                addLog('ページがアンロードされます', 'warn');
+            });
+        });
+    </script>
+</body>
+</html>

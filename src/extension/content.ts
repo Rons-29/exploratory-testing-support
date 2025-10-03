@@ -1,18 +1,21 @@
 import { EventTracker } from './services/EventTracker';
 import { FloatingButton } from './ui/FloatingButton';
+import { LogCollector } from './services/LogCollector';
 
 class ContentScript {
   private eventTracker: EventTracker;
   private floatingButton: FloatingButton;
+  private logCollector: LogCollector;
   private isSessionActive: boolean = false;
 
   constructor() {
     this.eventTracker = new EventTracker();
     this.floatingButton = new FloatingButton();
+    this.logCollector = new LogCollector();
   }
 
   public initialize(): void {
-    console.log('AIテストパートナー: Content script initialized');
+    console.log('探索的テスト支援: Content script initialized');
     
     // ページ読み込み完了後に初期化
     if (document.readyState === 'loading') {
@@ -107,25 +110,40 @@ class ContentScript {
     message: any,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: any) => void
-  ): void {
+  ): boolean {
     switch (message.type) {
+      case 'PING':
+        // Background scriptからの接続確認に応答
+        sendResponse({ success: true });
+        return true;
       case 'SESSION_STARTED':
         this.isSessionActive = true;
         this.floatingButton.updateStatus('active');
-        break;
+        this.logCollector.startCollecting(0); // tabIdは不要
+        return true;
       case 'SESSION_STOPPED':
         this.isSessionActive = false;
         this.floatingButton.updateStatus('inactive');
-        break;
+        this.logCollector.stopCollecting();
+        return true;
+      case 'START_LOG_COLLECTION':
+        this.logCollector.startCollecting(0);
+        return true;
       case 'TOGGLE_SESSION':
         this.toggleSession();
-        break;
+        return true;
       case 'TAKE_SCREENSHOT':
         this.takeScreenshot();
-        break;
+        return true;
       case 'FLAG_CURRENT_EVENT':
         this.flagCurrentEvent();
-        break;
+        return true;
+      case 'FLAG_EVENT':
+        this.logCollector.flagEvent(message.eventId, message.note);
+        return true;
+      default:
+        console.log('Unknown message type:', message.type);
+        return false;
     }
   }
 

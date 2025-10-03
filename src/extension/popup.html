@@ -3,73 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIテストパートナー</title>
+    <title>探索的テスト支援</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="popup-container">
-    <header class="popup-header">
-      <h1>AIテストパートナー</h1>
-      <div class="status-indicator" id="statusIndicator">
+  <div class="container">
+    <div class="header">
+      <h1 class="title">探索的テスト支援</h1>
+      <p class="subtitle">探索的テスト支援ツール</p>
+    </div>
+
+    <div class="status-section">
+      <h3 class="status-title">ステータス</h3>
+      <div id="statusIndicator" class="status-indicator">
         <span class="status-dot inactive"></span>
         <span class="status-text">停止中</span>
       </div>
-    </header>
+    </div>
 
-    <main class="popup-main">
-      <div class="session-controls">
-        <button id="toggleSession" class="btn btn-primary">
-          <span class="btn-icon">▶</span>
-          <span class="btn-text">テスト開始</span>
-        </button>
-        
-        <div class="session-info" id="sessionInfo" style="display: none;">
-          <p class="session-id">セッションID: <span id="sessionId">-</span></p>
-          <p class="session-duration">経過時間: <span id="sessionDuration">00:00:00</span></p>
-        </div>
+    <div class="controls">
+      <button id="toggleSession" class="btn btn-primary">
+        <span class="btn-icon">▶</span>
+        <span class="btn-text">テスト開始</span>
+      </button>
+      
+      <div class="session-info" id="sessionInfo" style="display: none;">
+        <p>セッションID: <span id="sessionId">-</span></p>
+        <p>経過時間: <span id="sessionDuration">00:00:00</span></p>
       </div>
+    </div>
 
-      <div class="quick-actions">
-        <button id="takeScreenshot" class="btn btn-secondary" disabled>
-          <span class="btn-icon">📷</span>
-          <span class="btn-text">スクリーンショット</span>
-        </button>
-        
-        <button id="viewLogs" class="btn btn-secondary" disabled>
-          <span class="btn-icon">📋</span>
-          <span class="btn-text">ログ確認</span>
-        </button>
-        
-        <button id="exportReport" class="btn btn-secondary" disabled>
-          <span class="btn-icon">📄</span>
-          <span class="btn-text">レポート出力</span>
-        </button>
-      </div>
+    <div class="menu-section">
+      <h3 class="menu-title">クイックアクション</h3>
+      
+      <a href="#" id="takeScreenshot" class="menu-item btn">
+        <span class="menu-icon">📷</span>
+        <span class="menu-text">スクリーンショット</span>
+      </a>
+      
+      <a href="#" id="viewLogs" class="menu-item btn">
+        <span class="menu-icon">📋</span>
+        <span class="menu-text">ログ確認</span>
+      </a>
+      
+      <a href="#" id="exportReport" class="menu-item btn">
+        <span class="menu-icon">📄</span>
+        <span class="menu-text">レポート出力</span>
+      </a>
+    </div>
 
-      <div class="stats" id="stats">
+    <div class="stats">
+      <h3 class="stats-title">統計情報</h3>
+      <div class="stats-grid">
         <div class="stat-item">
-          <span class="stat-label">記録イベント数</span>
-          <span class="stat-value" id="eventCount">0</span>
+          <p class="stat-value" id="eventCount">0</p>
+          <p class="stat-label">イベント数</p>
         </div>
         <div class="stat-item">
-          <span class="stat-label">エラー数</span>
-          <span class="stat-value" id="errorCount">0</span>
+          <p class="stat-value" id="errorCount">0</p>
+          <p class="stat-label">エラー数</p>
         </div>
         <div class="stat-item">
-          <span class="stat-label">スクリーンショット数</span>
-          <span class="stat-value" id="screenshotCount">0</span>
+          <p class="stat-value" id="screenshotCount">0</p>
+          <p class="stat-label">スクリーンショット</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="flagCount">0</p>
+          <p class="stat-label">フラグ数</p>
         </div>
       </div>
-    </main>
+    </div>
 
-    <footer class="popup-footer">
-      <div class="settings-link">
-        <a href="#" id="openSettings">設定</a>
-      </div>
-      <div class="version-info">
-        v1.0.0
-      </div>
-    </footer>
+    <div class="footer">
+      <p class="version">v1.0.0</p>
+    </div>
   </div>
 
   <script src="popup.js"></script>

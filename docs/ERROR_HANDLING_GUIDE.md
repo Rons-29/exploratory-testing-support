@@ -175,3 +175,6 @@ describe('Debugging complex function', () => {
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 - [Jest Documentation](https://jestjs.io/docs/getting-started)
 - [Chrome Extension Development](https://developer.chrome.com/docs/extensions/)
+
+
+

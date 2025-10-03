@@ -200,7 +200,7 @@ export class LogCollector {
         typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
       ),
       timestamp: new Date().toISOString(),
-      url: window.location.href,
+      url: typeof window !== 'undefined' ? window.location.href : 'chrome-extension://' + chrome.runtime.id,
       stack: this.getStackTrace()
     };
 
@@ -220,7 +220,7 @@ export class LogCollector {
       message: `${networkData.method} ${networkData.url} - ${networkData.status} ${networkData.statusText}`,
       args: [JSON.stringify(networkData)],
       timestamp: new Date().toISOString(),
-      url: window.location.href,
+      url: typeof window !== 'undefined' ? window.location.href : 'chrome-extension://' + chrome.runtime.id,
       metadata: {
         type: 'network',
         method: networkData.method,
@@ -246,7 +246,7 @@ export class LogCollector {
       message: `${errorData.type}: ${errorData.message}`,
       args: [JSON.stringify(errorData)],
       timestamp: new Date().toISOString(),
-      url: window.location.href,
+      url: typeof window !== 'undefined' ? window.location.href : 'chrome-extension://' + chrome.runtime.id,
       metadata: {
         type: 'error',
         filename: errorData.filename,

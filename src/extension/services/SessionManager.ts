@@ -5,7 +5,10 @@ export class SessionManager {
   private sessionStorageKey = 'current_session';
 
   constructor() {
-    this.loadSessionFromStorage();
+    // 非同期でセッションを読み込み
+    this.loadSessionFromStorage().catch(error => {
+      console.error('Failed to initialize session manager:', error);
+    });
   }
 
   public async startSession(name?: string, description?: string): Promise<string> {
@@ -28,7 +31,7 @@ export class SessionManager {
       flags: [],
       metadata: {
         userAgent: navigator.userAgent,
-        url: window.location.href,
+        url: 'chrome-extension://' + chrome.runtime.id,
         timestamp: now.toISOString()
       }
     };
@@ -77,7 +80,15 @@ export class SessionManager {
   }
 
   public async isActive(): Promise<boolean> {
-    return this.currentSession?.status === SessionStatus.ACTIVE;
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
+    const isActive = this.currentSession?.status === SessionStatus.ACTIVE;
+    console.log('SessionManager: isActive check:', {
+      currentSession: this.currentSession,
+      status: this.currentSession?.status,
+      isActive
+    });
+    return isActive;
   }
 
   public async getCurrentSession(): Promise<SessionData | null> {
@@ -108,7 +119,7 @@ export class SessionManager {
       id: screenshotId,
       data: screenshotData,
       timestamp: new Date().toISOString(),
-      url: window.location.href
+      url: 'chrome-extension://' + chrome.runtime.id
     });
 
     await this.saveSessionToStorage();

@@ -44,12 +44,16 @@ class PopupController {
 
   private async loadSessionStatus(): Promise<void> {
     try {
+      console.log('Loading session status...');
       const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
-      if (response.success) {
+      console.log('Session status response:', response);
+      if (response && response.success) {
         this.isSessionActive = response.isActive;
         this.sessionId = response.sessionData?.id || null;
         this.sessionStartTime = response.sessionData?.startTime || null;
         this.updateUI();
+      } else {
+        console.log('No active session or invalid response');
       }
     } catch (error) {
       console.error('Failed to load session status:', error);
@@ -58,27 +62,38 @@ class PopupController {
 
   private async toggleSession(): Promise<void> {
     try {
+      console.log('Toggling session...');
       const response = await chrome.runtime.sendMessage({ type: 'TOGGLE_SESSION' });
-      if (response.success) {
-        this.isSessionActive = !this.isSessionActive;
+      console.log('Toggle session response:', response);
+      if (response && response.success) {
+        // Background Scriptから返された状態を使用
+        this.isSessionActive = response.isActive;
+        
         if (this.isSessionActive) {
           this.sessionId = response.sessionId;
           this.sessionStartTime = new Date();
           this.startTimer();
         } else {
+          this.sessionId = null;
+          this.sessionStartTime = null;
           this.stopTimer();
         }
         this.updateUI();
+        this.updateStats(); // 統計情報も更新
+      } else {
+        console.log('Failed to toggle session:', response);
+        this.showNotification('セッションの切り替えに失敗しました', 'error');
       }
     } catch (error) {
       console.error('Failed to toggle session:', error);
+      this.showNotification('セッションの切り替えに失敗しました', 'error');
     }
   }
 
   private async takeScreenshot(): Promise<void> {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'TAKE_SCREENSHOT' });
-      if (response.success) {
+      if (response && response.success) {
         this.showNotification('スクリーンショットを撮影しました', 'success');
         this.updateStats();
       } else {
@@ -98,7 +113,9 @@ class PopupController {
   private async exportReport(): Promise<void> {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'EXPORT_REPORT' });
-      if (response.success) {
+      if (response && response.success) {
+        // クリップボードにコピー
+        await navigator.clipboard.writeText(response.report);
         this.showNotification('レポートをクリップボードにコピーしました', 'success');
       } else {
         this.showNotification('レポートの出力に失敗しました', 'error');
@@ -127,29 +144,29 @@ class PopupController {
       // アクティブ状態
       statusDot?.classList.remove('inactive');
       statusDot?.classList.add('active');
-      statusText!.textContent = '記録中';
+      if (statusText) statusText.textContent = '記録中';
       
       const btnIcon = toggleButton?.querySelector('.btn-icon');
       const btnText = toggleButton?.querySelector('.btn-text');
-      btnIcon!.textContent = '⏹';
-      btnText!.textContent = 'テスト停止';
+      if (btnIcon) btnIcon.textContent = '⏹';
+      if (btnText) btnText.textContent = 'テスト停止';
       
-      sessionInfo!.style.display = 'block';
-      sessionId!.textContent = this.sessionId || '-';
+      if (sessionInfo) sessionInfo.style.display = 'block';
+      if (sessionId) sessionId.textContent = this.sessionId || '-';
       
       quickActions.forEach(btn => btn.removeAttribute('disabled'));
     } else {
       // 非アクティブ状態
       statusDot?.classList.remove('active');
       statusDot?.classList.add('inactive');
-      statusText!.textContent = '停止中';
+      if (statusText) statusText.textContent = '停止中';
       
       const btnIcon = toggleButton?.querySelector('.btn-icon');
       const btnText = toggleButton?.querySelector('.btn-text');
-      btnIcon!.textContent = '▶';
-      btnText!.textContent = 'テスト開始';
+      if (btnIcon) btnIcon.textContent = '▶';
+      if (btnText) btnText.textContent = 'テスト開始';
       
-      sessionInfo!.style.display = 'none';
+      if (sessionInfo) sessionInfo.style.display = 'none';
       
       quickActions.forEach(btn => btn.setAttribute('disabled', 'true'));
     }
@@ -186,7 +203,7 @@ class PopupController {
   private async updateStats(): Promise<void> {
     try {
       const response = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
-      if (response.success) {
+      if (response && response.success) {
         document.getElementById('eventCount')!.textContent = response.stats.eventCount || '0';
         document.getElementById('errorCount')!.textContent = response.stats.errorCount || '0';
         document.getElementById('screenshotCount')!.textContent = response.stats.screenshotCount || '0';

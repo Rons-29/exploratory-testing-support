@@ -14,7 +14,7 @@ module.exports = {
         use: {
           loader: 'ts-loader',
           options: {
-            configFile: 'tsconfig.json'
+            configFile: 'tsconfig.extension.json'
           }
         },
         exclude: /node_modules/
@@ -28,15 +28,15 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-      '@/extension': path.resolve(__dirname, 'src/extension'),
-      '@/backend': path.resolve(__dirname, 'src/backend'),
-      '@/shared': path.resolve(__dirname, 'src/shared')
+      '@': path.resolve(__dirname, '../src'),
+      '@/extension': path.resolve(__dirname, '../src/extension'),
+      '@/backend': path.resolve(__dirname, '../src/backend'),
+      '@/shared': path.resolve(__dirname, '../src/shared')
     }
   },
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, 'dist/extension'),
+    path: path.resolve(__dirname, '../dist'),
     clean: true
   },
   plugins: [

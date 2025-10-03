@@ -6,7 +6,8 @@ export class ApiClient {
   private accessToken: string | null = null;
 
   constructor() {
-    this.baseUrl = process.env.API_BASE_URL || 'http://localhost:3000/api';
+    // Chrome拡張機能では環境変数が利用できないため、定数を使用
+    this.baseUrl = 'http://localhost:3000/api';
     this.loadAccessToken();
   }
 
@@ -163,7 +164,7 @@ export class ApiClient {
         body: JSON.stringify({ 
           data: screenshotData,
           timestamp: new Date().toISOString(),
-          url: window.location.href
+          url: typeof window !== 'undefined' ? window.location.href : 'chrome-extension://' + chrome.runtime.id
         })
       });
 

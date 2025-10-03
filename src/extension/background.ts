@@ -78,7 +78,7 @@ class BackgroundService {
       const sessionId = await this.sessionManager.startSession();
       sendResponse({ success: true, sessionId });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -88,7 +88,7 @@ class BackgroundService {
       await this.apiClient.saveSession(sessionData);
       sendResponse({ success: true, sessionData });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -101,7 +101,7 @@ class BackgroundService {
         await this.handleStartSession(message, sendResponse);
       }
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -111,7 +111,7 @@ class BackgroundService {
       const sessionData = await this.sessionManager.getCurrentSession();
       sendResponse({ success: true, isActive, sessionData });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -121,7 +121,7 @@ class BackgroundService {
       const screenshotId = await this.apiClient.uploadScreenshot(screenshot);
       sendResponse({ success: true, screenshotId });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -130,7 +130,7 @@ class BackgroundService {
       await this.logCollector.flagEvent(message.eventId, message.note);
       sendResponse({ success: true });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 

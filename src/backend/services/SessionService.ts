@@ -1,7 +1,7 @@
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Logger } from '../utils/Logger';
-import { SessionData, SessionStatus } from '@/shared/types/SessionTypes';
-import { PaginatedResponse, PaginationInfo } from '@/shared/types/ApiTypes';
+import { SessionData, SessionStatus } from '../../shared/types/SessionTypes';
+import { PaginatedResponse, PaginationInfo } from '../../shared/types/ApiTypes';
 
 export class SessionService {
   private databaseManager: DatabaseManager;
@@ -87,7 +87,7 @@ export class SessionService {
       const countResult = await this.databaseManager.query(countQuery, countParams);
       const total = parseInt(countResult.rows[0].count, 10);
 
-      const sessions = result.rows.map(row => this.mapSessionFromDb(row));
+      const sessions = result.rows.map((row: any) => this.mapSessionFromDb(row));
 
       const pagination: PaginationInfo = {
         page: options.page,
@@ -247,7 +247,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       timestamp: row.timestamp,
@@ -261,7 +261,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       data: row.data,
       timestamp: row.timestamp,
@@ -275,7 +275,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       eventId: row.event_id,
       note: row.note,

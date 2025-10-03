@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { SessionService } from '../services/SessionService';
 import { Logger } from '../utils/Logger';
 import { authenticateToken } from '../middleware/auth';
+import '../../shared/types/ExpressTypes';
 
 export class SessionController {
   private sessionService: SessionService;

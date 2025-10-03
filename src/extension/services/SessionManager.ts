@@ -136,6 +136,7 @@ export class SessionManager {
     eventCount: number;
     errorCount: number;
     screenshotCount: number;
+    flagCount: number;
     duration: number;
   }> {
     if (!this.currentSession) {
@@ -143,6 +144,7 @@ export class SessionManager {
         eventCount: 0,
         errorCount: 0,
         screenshotCount: 0,
+        flagCount: 0,
         duration: 0
       };
     }
@@ -159,6 +161,7 @@ export class SessionManager {
       eventCount: this.currentSession.events.length,
       errorCount,
       screenshotCount: this.currentSession.screenshots.length,
+      flagCount: this.currentSession.flags.length,
       duration
     };
   }

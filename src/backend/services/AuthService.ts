@@ -1,8 +1,27 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { sign, verify, type SignOptions, type Secret, type JwtPayload } from 'jsonwebtoken';
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Logger } from '../utils/Logger';
-import { UserData } from '@/shared/types/ApiTypes';
+import { UserData } from '../../shared/types/ApiTypes';
+
+interface AccessTokenPayload extends JwtPayload {
+  userId: string;
+  email: string;
+  provider: string;
+}
+
+interface RefreshTokenPayload extends JwtPayload {
+  userId: string;
+  type: 'refresh';
+}
+
+const getJwtSecret = (): Secret => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET not set in environment variables');
+  }
+  return secret as Secret;
+};
 
 export class AuthService {
   private databaseManager: DatabaseManager;
@@ -89,7 +108,7 @@ export class AuthService {
 
   public async verifyToken(token: string): Promise<UserData> {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = verify(token, getJwtSecret()) as AccessTokenPayload;
       
       const result = await this.databaseManager.query(
         'SELECT * FROM users WHERE id = $1',
@@ -147,7 +166,7 @@ export class AuthService {
 
   public async revokeToken(token: string): Promise<void> {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = verify(token, getJwtSecret()) as AccessTokenPayload;
       
       // リフレッシュトークンを削除
       await this.databaseManager.query(
@@ -185,23 +204,21 @@ export class AuthService {
   }
 
   private generateAccessToken(user: UserData): string {
-    return jwt.sign(
-      { 
-        userId: user.id,
-        email: user.email,
-        provider: user.provider
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
+    const payload = { 
+      userId: user.id,
+      email: user.email,
+      provider: user.provider
+    };
+    return sign(payload, getJwtSecret(), { 
+      expiresIn: (process.env.JWT_EXPIRES_IN ?? '7d') as any
+    });
   }
 
   private async generateRefreshToken(userId: string): Promise<string> {
-    const token = jwt.sign(
-      { userId, type: 'refresh' },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d' }
-    );
+    const payload = { userId, type: 'refresh' as const };
+    const token = sign(payload, getJwtSecret(), { 
+      expiresIn: (process.env.REFRESH_TOKEN_EXPIRES_IN ?? '30d') as any
+    });
 
     const tokenHash = await bcrypt.hash(token, 10);
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30日後

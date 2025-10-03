@@ -1,6 +1,12 @@
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Logger } from '../utils/Logger';
-import { LogData } from '@/shared/types/LogTypes';
+import { LogData } from '../../shared/types/LogTypes';
+
+// LogService用の拡張LogData型
+export interface ServiceLogData extends LogData {
+  sessionId: string;
+  data?: any;
+}
 
 export interface LogSearchOptions {
   query?: string;
@@ -24,7 +30,7 @@ export class LogService {
     this.logger = new Logger();
   }
 
-  public async getLogsBySession(sessionId: string, options: LogPaginationOptions): Promise<LogData[]> {
+  public async getLogsBySession(sessionId: string, options: LogPaginationOptions): Promise<ServiceLogData[]> {
     try {
       const { page, limit, level } = options;
       const offset = (page - 1) * limit;
@@ -51,7 +57,7 @@ export class LogService {
     }
   }
 
-  public async createLog(logData: Partial<LogData>): Promise<LogData> {
+  public async createLog(logData: Partial<ServiceLogData>): Promise<ServiceLogData> {
     try {
       const { sessionId, level, message, data, timestamp } = logData;
       
@@ -72,7 +78,7 @@ export class LogService {
     }
   }
 
-  public async updateLog(id: string, updateData: Partial<LogData>): Promise<LogData> {
+  public async updateLog(id: string, updateData: Partial<ServiceLogData>): Promise<ServiceLogData> {
     try {
       const fields = [];
       const params: unknown[] = [];
@@ -134,7 +140,7 @@ export class LogService {
     }
   }
 
-  public async searchLogs(sessionId: string, options: LogSearchOptions): Promise<LogData[]> {
+  public async searchLogs(sessionId: string, options: LogSearchOptions): Promise<ServiceLogData[]> {
     try {
       const { query, level, startDate, endDate } = options;
       

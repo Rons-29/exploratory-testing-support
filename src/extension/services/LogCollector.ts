@@ -1,5 +1,5 @@
 import { SessionManager } from './SessionManager';
-import { LogData, LogLevel } from '@/shared/types/LogTypes';
+import { LogData, LogLevel, NetworkLogData, ErrorLogData } from '../../shared/types/LogTypes';
 
 export class LogCollector {
   private sessionManager: SessionManager;
@@ -28,6 +28,8 @@ export class LogCollector {
     if (this.isCollecting) return;
 
     this.isCollecting = true;
+    // LogCollectorのインスタンスをwindowに保存（XMLHttpRequestの監視で使用）
+    (window as any).__logCollector = this;
     this.setupConsoleInterception();
     this.setupNetworkMonitoring();
     this.setupErrorHandling();
@@ -37,6 +39,8 @@ export class LogCollector {
     if (!this.isCollecting) return;
 
     this.isCollecting = false;
+    // LogCollectorのインスタンスをwindowから削除
+    delete (window as any).__logCollector;
     this.restoreConsole();
     this.clearNetworkMonitoring();
   }
@@ -84,17 +88,17 @@ export class LogCollector {
   private setupNetworkMonitoring(): void {
     // Fetch APIの監視
     const originalFetch = window.fetch;
-    window.fetch = async (...args: any[]) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const startTime = performance.now();
-      const url = args[0];
+      const url = input;
       
       try {
-        const response = await originalFetch(...args);
+        const response = await originalFetch(input, init);
         const endTime = performance.now();
         
         this.collectNetworkLog({
           method: 'GET',
-          url: typeof url === 'string' ? url : url.url,
+          url: typeof url === 'string' ? url : (url as URL).href,
           status: response.status,
           statusText: response.statusText,
           duration: endTime - startTime,
@@ -107,12 +111,12 @@ export class LogCollector {
         
         this.collectNetworkLog({
           method: 'GET',
-          url: typeof url === 'string' ? url : url.url,
+          url: typeof url === 'string' ? url : (url as URL).href,
           status: 0,
           statusText: 'Network Error',
           duration: endTime - startTime,
           success: false,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
         
         throw error;
@@ -123,12 +127,12 @@ export class LogCollector {
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
 
-    XMLHttpRequest.prototype.open = function(method: string, url: string, ...args: any[]) {
+    XMLHttpRequest.prototype.open = function(method: string, url: string | URL, async?: boolean, username?: string | null, password?: string | null) {
       (this as any)._method = method;
       (this as any)._url = url;
       (this as any)._startTime = performance.now();
       
-      return originalXHROpen.apply(this, [method, url, ...args]);
+      return originalXHROpen.call(this, method, url, async ?? true, username, password);
     };
 
     XMLHttpRequest.prototype.send = function(data?: any) {
@@ -137,17 +141,21 @@ export class LogCollector {
       xhr.addEventListener('loadend', () => {
         const endTime = performance.now();
         
-        this.collectNetworkLog({
-          method: xhr._method,
-          url: xhr._url,
-          status: xhr.status,
-          statusText: xhr.statusText,
-          duration: endTime - xhr._startTime,
-          success: xhr.status >= 200 && xhr.status < 400
-        });
+        // LogCollectorのインスタンスを取得してcollectNetworkLogを呼び出し
+        const logCollector = (window as any).__logCollector;
+        if (logCollector) {
+          logCollector.collectNetworkLog({
+            method: xhr._method,
+            url: typeof xhr._url === 'string' ? xhr._url : xhr._url.href,
+            status: xhr.status,
+            statusText: xhr.statusText,
+            duration: endTime - xhr._startTime,
+            success: xhr.status >= 200 && xhr.status < 400
+          });
+        }
       });
       
-      return originalXHRSend.apply(this, [data]);
+      return originalXHRSend.call(this, data);
     };
   }
 
@@ -203,22 +211,14 @@ export class LogCollector {
     });
   }
 
-  private async collectNetworkLog(networkData: {
-    method: string;
-    url: string;
-    status: number;
-    statusText: string;
-    duration: number;
-    success: boolean;
-    error?: string;
-  }): Promise<void> {
+  private async collectNetworkLog(networkData: NetworkLogData): Promise<void> {
     if (!this.isCollecting) return;
 
     const logData: LogData = {
       id: this.generateLogId(),
       level: networkData.success ? LogLevel.INFO : LogLevel.ERROR,
       message: `${networkData.method} ${networkData.url} - ${networkData.status} ${networkData.statusText}`,
-      args: [networkData],
+      args: [JSON.stringify(networkData)],
       timestamp: new Date().toISOString(),
       url: window.location.href,
       metadata: {
@@ -237,21 +237,14 @@ export class LogCollector {
     });
   }
 
-  private async collectErrorLog(errorData: {
-    message: string;
-    filename?: string;
-    lineno?: number;
-    colno?: number;
-    stack?: string;
-    type: string;
-  }): Promise<void> {
+  private async collectErrorLog(errorData: ErrorLogData): Promise<void> {
     if (!this.isCollecting) return;
 
     const logData: LogData = {
       id: this.generateLogId(),
       level: LogLevel.ERROR,
       message: `${errorData.type}: ${errorData.message}`,
-      args: [errorData],
+      args: [JSON.stringify(errorData)],
       timestamp: new Date().toISOString(),
       url: window.location.href,
       metadata: {

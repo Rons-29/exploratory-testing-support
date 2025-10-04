@@ -1,4 +1,4 @@
-Https://github.com/ChromeDevTools/chrome-devtools-mcp
+<Https://github.com/ChromeDevTools/chrome-devtools-mcp>
 
 これについておしえて
 
@@ -33,7 +33,7 @@ AIアシスタントを活用して、ウェブサイトのパフォーマンス
 だれがだしてる？
 
 思考プロセスを表示
-https://github.com/ChromeDevTools/chrome-devtools-mcp は、GoogleのChrome DevToolsチームが公開しているプロジェクトです。
+<https://github.com/ChromeDevTools/chrome-devtools-mcp> は、GoogleのChrome DevToolsチームが公開しているプロジェクトです。
 
 GitHubのURLにある ChromeDevTools というのが、Google Chromeの開発者ツールを担当している公式のオーガナイゼーション（組織）名になります。
 
@@ -444,7 +444,7 @@ PMが仕様確認の際に、考慮漏れをその場で再現手順付きで報
 
 拡大ターゲット: 自身の担当領域の品質を簡単に確認したいPM、Webデザイナー、開発者。
 
-## 次のステップに進みましょう！
+## 次のステップに進みましょう
 
 「なぜ作るのか(Why)」と「誰のために作るのか(Who)」が明確になったところで、次はいよいよ**「3. 機能要件 (What)」、つまり「何を作るのか」**を具体的にしていきましょう。
 

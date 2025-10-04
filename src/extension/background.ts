@@ -35,7 +35,7 @@ class BackgroundService {
         console.log('探索的テスト支援: Message received', message.type, sender);
         this.handleMessage(message, sender, sendResponse);
       });
-
+      
       console.log('探索的テスト支援: Background service initialized successfully');
     } catch (error) {
       console.error('探索的テスト支援: Failed to initialize background service:', error);
@@ -47,11 +47,7 @@ class BackgroundService {
     // 初期設定やデフォルト値の設定
   }
 
-  private handleTabUpdate(
-    tabId: number,
-    changeInfo: chrome.tabs.TabChangeInfo,
-    tab: chrome.tabs.Tab
-  ): void {
+  private handleTabUpdate(tabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab): void {
     if (changeInfo.status === 'complete' && tab.url) {
       // ページ読み込み完了時の処理
       // コンテンツスクリプトが注入されているか確認してからメッセージを送信
@@ -126,6 +122,10 @@ class BackgroundService {
           console.log('探索的テスト支援: Clearing logs...');
           this.handleClearLogs(sendResponse);
           return true; // 非同期処理のため
+        case 'CLEAR_ALL_DATA':
+          console.log('探索的テスト支援: Clearing all data...');
+          this.handleClearAllData(sendResponse);
+          return true; // 非同期処理のため
         case 'MCP_CONNECT':
           console.log('探索的テスト支援: Connecting to MCP...');
           this.handleMCPConnect(sendResponse);
@@ -145,66 +145,48 @@ class BackgroundService {
       }
     } catch (error) {
       console.error('探索的テスト支援: Error handling message:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
 
-  private async handleStartSession(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleStartSession(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       const sessionId = await this.sessionManager.startSession();
-
+      
       // DevTools Protocolをアタッチしてネットワーク監視を開始
       await this.attachDevTools();
-
+      
       sendResponse({ success: true, sessionId });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleStopSession(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleStopSession(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       const sessionData = await this.sessionManager.stopSession();
       await this.apiClient.saveSession(sessionData);
-
+      
       // DevToolsをデタッチ
       await this.detachDevTools();
-
+      
       sendResponse({ success: true, sessionData });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleToggleSession(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleToggleSession(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       const isActive = await this.sessionManager.isActive();
       console.log('Background: Toggle session - isActive:', isActive);
-
+      
       if (isActive) {
         console.log('Background: Stopping session...');
         const sessionData = await this.sessionManager.stopSession();
         console.log('Background: Session data:', sessionData);
-
+        
         try {
           // Background Scriptで直接APIを呼び出し
           const apiResponse = await this.apiClient.saveSession(sessionData);
@@ -213,18 +195,18 @@ class BackgroundService {
           console.error('Background: API save failed:', apiError);
           // API送信に失敗してもセッション停止は続行
         }
-
+        
         // コンテンツスクリプトにセッション停止を通知
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs[0]?.id) {
           await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STOPPED' });
         }
-
+        
         sendResponse({ success: true, sessionData, isActive: false });
       } else {
         console.log('Background: Starting session...');
         const sessionId = await this.sessionManager.startSession();
-
+        
         // すべてのタブにContent Scriptを再注入してセッション開始を通知
         const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
         for (const tab of tabs) {
@@ -233,28 +215,22 @@ class BackgroundService {
               // Content Scriptを再注入
               await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                files: ['content.js'],
+                files: ['content.js']
               });
-
+              
               // セッション開始を通知
               await this.sendMessageToContentScript(tab.id, { type: 'SESSION_STARTED', sessionId });
             } catch (error) {
-              console.error(
-                `Background: Failed to inject content script into tab ${tab.id}:`,
-                error
-              );
+              console.error(`Background: Failed to inject content script into tab ${tab.id}:`, error);
             }
           }
         }
-
+        
         sendResponse({ success: true, sessionId, isActive: true });
       }
     } catch (error) {
       console.error('Background: Toggle session error:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -264,53 +240,78 @@ class BackgroundService {
       const isActive = await this.sessionManager.isActive();
       const sessionData = await this.sessionManager.getCurrentSession();
       console.log('Background: Session status - isActive:', isActive, 'sessionData:', sessionData);
-      sendResponse({ success: true, isActive, sessionData });
+      
+      // セッションデータを安全にフォーマット
+      const formatDate = (date: any): string | null => {
+        if (!date) return null;
+        
+        try {
+          let dateObj: Date;
+          if (date instanceof Date) {
+            dateObj = date;
+          } else if (typeof date === 'string') {
+            dateObj = new Date(date);
+          } else {
+            return null;
+          }
+          
+          // 有効な日付かチェック
+          if (isNaN(dateObj.getTime())) {
+            console.warn('Invalid date value:', date);
+            return null;
+          }
+          
+          return dateObj.toISOString();
+        } catch (error) {
+          console.error('Failed to format date:', error, 'date:', date);
+          return null;
+        }
+      };
+
+      const formattedSessionData = sessionData ? {
+        id: sessionData.id,
+        name: sessionData.name,
+        description: sessionData.description,
+        status: sessionData.status,
+        startTime: formatDate(sessionData.startTime),
+        endTime: formatDate(sessionData.endTime),
+        events: sessionData.events,
+        screenshots: sessionData.screenshots,
+        flags: sessionData.flags,
+        metadata: sessionData.metadata
+      } : null;
+      
+      sendResponse({ success: true, isActive, sessionData: formattedSessionData });
     } catch (error) {
       console.error('Background: Failed to get session status:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleTakeScreenshot(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleTakeScreenshot(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       const screenshot = await this.captureScreenshot();
       const screenshotId = await this.apiClient.uploadScreenshot(screenshot);
       sendResponse({ success: true, screenshotId });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleFlagEvent(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleFlagEvent(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       // コンテンツスクリプトにフラグイベントを送信
-      const tabId =
-        message.tabId || (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+      const tabId = message.tabId || (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
       if (tabId) {
         await this.sendMessageToContentScript(tabId, {
           type: 'FLAG_EVENT',
           eventId: message.eventId,
-          note: message.note,
+          note: message.note
         });
       }
       sendResponse({ success: true });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -319,69 +320,57 @@ class BackgroundService {
       // SessionManagerから現在のセッションを取得して統計を計算
       const sessionData = await this.sessionManager.getCurrentSession();
       const logs = sessionData?.events || [];
-
+      
       const stats = {
         eventCount: logs.length,
         clickCount: logs.filter((log: any) => log.type === 'click').length,
         keydownCount: logs.filter((log: any) => log.type === 'keydown').length,
-        errorCount: logs.filter(
-          (log: any) =>
-            log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
-        ).length,
+        errorCount: logs.filter((log: any) => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
         consoleCount: logs.filter((log: any) => log.type === 'console').length,
         networkCount: logs.filter((log: any) => log.type === 'network').length,
         networkErrorCount: logs.filter((log: any) => log.type === 'network_error').length,
         screenshotCount: logs.filter((log: any) => log.type === 'screenshot').length,
-        flagCount: logs.filter((log: any) => log.type === 'flag').length,
+        flagCount: logs.filter((log: any) => log.type === 'flag').length
       };
-
+      
       console.log('Background: Stats calculated from session:', stats);
       sendResponse({ success: true, stats });
     } catch (error) {
       console.error('Background: Failed to get stats:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleExportReport(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleExportReport(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       console.log('Background: handleExportReport called');
-
+      
       // SessionManagerから現在のセッションを取得
       const sessionData = await this.sessionManager.getCurrentSession();
       console.log('Background: Session data retrieved:', sessionData);
-
+      
       let logs = sessionData?.events || [];
       console.log('Background: Events from session:', logs.length);
-
+      
       // もしセッションからのログが空の場合、test_logsも確認
       if (logs.length === 0) {
         const storageData = await chrome.storage.local.get('test_logs');
         logs = storageData.test_logs || [];
         console.log('Background: Retrieved', logs.length, 'logs from test_logs');
       }
-
+      
       console.log('Background: Total logs to export:', logs.length);
       console.log('Background: First few logs:', logs.slice(0, 3));
-
+      
       // 簡単なMarkdownレポートを生成
       const report = this.generateMarkdownReport(logs);
-
+      
       // レポートとログデータを送信
       console.log('Background: Sending response with', logs.length, 'logs');
       sendResponse({ success: true, report, logs });
     } catch (error) {
       console.error('Background: Failed to export report:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -389,13 +378,9 @@ class BackgroundService {
     const now = new Date();
     const firstLog = logs.length > 0 ? logs[0] : null;
     const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
-
-    const startTime = firstLog
-      ? new Date(firstLog.timestamp).toLocaleString('ja-JP')
-      : now.toLocaleString('ja-JP');
-    const endTime = lastLog
-      ? new Date(lastLog.timestamp).toLocaleString('ja-JP')
-      : now.toLocaleString('ja-JP');
+    
+    const startTime = firstLog ? new Date(firstLog.timestamp).toLocaleString('ja-JP') : now.toLocaleString('ja-JP');
+    const endTime = lastLog ? new Date(lastLog.timestamp).toLocaleString('ja-JP') : now.toLocaleString('ja-JP');
     const duration = firstLog ? Math.floor((now.getTime() - firstLog.timestamp) / 1000 / 60) : 0;
 
     let report = `# 探索的テストレポート\n\n`;
@@ -412,9 +397,7 @@ class BackgroundService {
     const consoleCount = logs.filter(log => log.type === 'console').length;
     const networkCount = logs.filter(log => log.type === 'network').length;
     const networkErrorCount = logs.filter(log => log.type === 'network_error').length;
-    const errorCount = logs.filter(
-      log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
-    ).length;
+    const errorCount = logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length;
     const screenshotCount = logs.filter(log => log.type === 'screenshot').length;
     const flagCount = logs.filter(log => log.type === 'flag').length;
 
@@ -445,9 +428,7 @@ class BackgroundService {
     }
 
     // エラーログを表示
-    const errors = logs.filter(
-      log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
-    );
+    const errors = logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error'));
     if (errors.length > 0) {
       report += `## エラーログ\n\n`;
       errors.forEach((error: any, index: number) => {
@@ -465,15 +446,14 @@ class BackgroundService {
       report += `## イベントログサマリー\n\n`;
       report += `| 時刻 | タイプ | メッセージ | URL |\n`;
       report += `|------|--------|------------|-----|\n`;
-
-      logs.slice(-20).forEach((log: any) => {
-        // 最新20件のみ表示
+      
+      logs.slice(-20).forEach((log: any) => { // 最新20件のみ表示
         const time = new Date(log.timestamp).toLocaleString('ja-JP');
         const message = log.message.replace(/\|/g, '\\|').substring(0, 50); // パイプ文字をエスケープ、50文字で切り詰め
         const url = (log.url || '').replace(/\|/g, '\\|').substring(0, 30); // 30文字で切り詰め
         report += `| ${time} | ${log.type} | ${message} | ${url} |\n`;
       });
-
+      
       if (logs.length > 20) {
         report += `\n*最新20件を表示（全${logs.length}件中）*\n`;
       }
@@ -484,7 +464,7 @@ class BackgroundService {
 
   private async captureScreenshot(): Promise<string> {
     return new Promise((resolve, reject) => {
-      chrome.tabs.captureVisibleTab({ format: 'png' }, dataUrl => {
+      chrome.tabs.captureVisibleTab({ format: 'png' }, (dataUrl) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
         } else {
@@ -500,7 +480,7 @@ class BackgroundService {
       if (tabs.length === 0) return;
 
       const tabId = tabs[0].id!;
-
+      
       // 既にアタッチされている場合はスキップ
       if (this.devToolsAttached.has(tabId)) {
         console.log('DevTools already attached to tab:', tabId);
@@ -523,9 +503,10 @@ class BackgroundService {
 
       // ネットワーク監視を有効化
       await this.enableNetworkMonitoring(tabId);
-
+      
       // コンソール監視を有効化
       await this.enableConsoleMonitoring(tabId);
+
     } catch (error) {
       console.error('Failed to attach DevTools:', error);
     }
@@ -534,7 +515,7 @@ class BackgroundService {
   private async detachDevTools(): Promise<void> {
     try {
       for (const tabId of this.devToolsAttached) {
-        await new Promise<void>(resolve => {
+        await new Promise<void>((resolve) => {
           chrome.debugger.detach({ tabId }, () => {
             if (chrome.runtime.lastError) {
               console.error('Failed to detach debugger:', chrome.runtime.lastError);
@@ -619,7 +600,7 @@ class BackgroundService {
           method: params.request.method,
           headers: params.request.headers,
           timestamp: Date.now(),
-          initiator: params.initiator,
+          initiator: params.initiator
         });
         break;
 
@@ -630,7 +611,7 @@ class BackgroundService {
             status: params.response.status,
             statusText: params.response.statusText,
             headers: params.response.headers,
-            mimeType: params.response.mimeType,
+            mimeType: params.response.mimeType
           };
         }
         break;
@@ -640,7 +621,7 @@ class BackgroundService {
         if (finishedIndex !== -1) {
           requests[finishedIndex].finished = true;
           requests[finishedIndex].encodedDataLength = params.encodedDataLength;
-
+          
           // ネットワークリクエストをログに保存
           this.saveNetworkRequest(requests[finishedIndex], tabId);
         }
@@ -651,7 +632,7 @@ class BackgroundService {
         if (failedIndex !== -1) {
           requests[failedIndex].failed = true;
           requests[failedIndex].errorText = params.errorText;
-
+          
           // ネットワークエラーをログに保存
           this.saveNetworkError(requests[failedIndex], tabId);
         }
@@ -661,7 +642,7 @@ class BackgroundService {
 
   private handleConsoleEvent(params: any, tabId: number): void {
     const { type, args, timestamp } = params;
-
+    
     // コンソールイベントをログに保存
     this.saveConsoleEvent(type, args, timestamp, tabId);
   }
@@ -683,16 +664,16 @@ class BackgroundService {
           responseHeaders: request.response?.headers,
           mimeType: request.response?.mimeType,
           encodedDataLength: request.encodedDataLength,
-          initiator: request.initiator,
+          initiator: request.initiator
         },
-        url: request.url,
+        url: request.url
       };
 
       // ストレージに保存
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(logEntry);
-
+      
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }
@@ -715,16 +696,16 @@ class BackgroundService {
           method: request.method,
           error: request.errorText,
           duration: Date.now() - request.timestamp,
-          initiator: request.initiator,
+          initiator: request.initiator
         },
-        url: request.url,
+        url: request.url
       };
 
       // ストレージに保存
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(logEntry);
-
+      
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }
@@ -735,12 +716,7 @@ class BackgroundService {
     }
   }
 
-  private async saveConsoleEvent(
-    type: string,
-    args: any[],
-    timestamp: number,
-    tabId: number
-  ): Promise<void> {
+  private async saveConsoleEvent(type: string, args: any[], timestamp: number, tabId: number): Promise<void> {
     try {
       const logEntry = {
         id: `console_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -750,16 +726,16 @@ class BackgroundService {
         details: {
           level: type,
           args: args,
-          tabId: tabId,
+          tabId: tabId
         },
-        url: (await chrome.tabs.get(tabId)).url,
+        url: (await chrome.tabs.get(tabId)).url
       };
 
       // ストレージに保存
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(logEntry);
-
+      
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }
@@ -775,38 +751,31 @@ class BackgroundService {
       const isConnected = await this.devToolsMCP.testConnection();
       sendResponse({ success: true, connected: isConnected });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private async handleMCPAnalyze(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
+  private async handleMCPAnalyze(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const context = message.context || {};
-      const result = await this.devToolsMCP.analyzeWithAI(context);
-      sendResponse(result);
-    } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
+      // MCP機能は一時的に無効化
+      sendResponse({ 
+        success: false, 
+        error: 'MCP機能は現在利用できません。Chrome DevTools MCPサーバーが起動していない可能性があります。' 
       });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
   private async handleMCPSnapshot(sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const result = await this.devToolsMCP.getBrowserSnapshot();
-      sendResponse(result);
-    } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
+      // MCP機能は一時的に無効化
+      sendResponse({ 
+        success: false, 
+        error: 'MCP機能は現在利用できません。Chrome DevTools MCPサーバーが起動していない可能性があります。' 
       });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -815,10 +784,7 @@ class BackgroundService {
       await this.sessionManager.clearSession();
       sendResponse({ success: true, message: 'Session cleared' });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -829,10 +795,7 @@ class BackgroundService {
       const logs = result.test_logs || [];
       sendResponse({ success: true, logs });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -841,10 +804,16 @@ class BackgroundService {
       await chrome.storage.local.remove('test_logs');
       sendResponse({ success: true, message: 'Logs cleared' });
     } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleClearAllData(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      await this.sessionManager.clearAllData();
+      sendResponse({ success: true, message: 'All data cleared' });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -854,7 +823,7 @@ class BackgroundService {
       console.log('Background: Message type:', message.type);
       console.log('Background: Message entry:', message.entry);
       console.log('Background: Message logEntry:', message.logEntry);
-
+      
       const entry = message.entry || message.logEntry;
       if (!entry) {
         console.log('Background: No entry provided in SAVE_LOG message');
@@ -862,12 +831,12 @@ class BackgroundService {
         return;
       }
       console.log('Background: Processing log entry:', entry);
-
+      
       // SessionManagerにログを追加
       console.log('Background: Adding event to SessionManager...');
       await this.sessionManager.addEvent(entry);
       console.log('Background: Event added to SessionManager');
-
+      
       // また、chrome.storage.localにも保存（後方互換性のため）
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
@@ -876,15 +845,12 @@ class BackgroundService {
         logs.splice(0, logs.length - 1000);
       }
       await chrome.storage.local.set({ test_logs: logs });
-
+      
       console.log('Background: Log saved successfully to both session and storage');
       sendResponse({ success: true });
     } catch (error) {
       console.error('Background: Failed to save log:', error);
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 }
@@ -906,11 +872,8 @@ try {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('探索的テスト支援: Direct message handler received:', message.type);
   console.log('探索的テスト支援: backgroundService available:', !!backgroundService);
-  console.log(
-    '探索的テスト支援: handleMessage function available:',
-    !!(backgroundService && typeof backgroundService.handleMessage === 'function')
-  );
-
+  console.log('探索的テスト支援: handleMessage function available:', !!(backgroundService && typeof backgroundService.handleMessage === 'function'));
+  
   if (backgroundService && typeof backgroundService.handleMessage === 'function') {
     console.log('探索的テスト支援: Calling backgroundService.handleMessage...');
     return backgroundService.handleMessage(message, sender, sendResponse);

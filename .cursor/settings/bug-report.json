@@ -1,0 +1,39 @@
+{
+  "bugReport": {
+    "enabled": true,
+    "autoTrigger": true,
+    "triggerKeywords": [
+      "不具合",
+      "バグ",
+      "エラー",
+      "問題",
+      "失敗",
+      "動かない",
+      "壊れた",
+      "異常",
+      "おかしい",
+      "変"
+    ],
+    "command": "npm run bug-report",
+    "outputPanel": "bug-report",
+    "autoCreateIssue": true,
+    "defaultPriority": "medium",
+    "labels": {
+      "bug": "bug",
+      "priority:low": "priority:low",
+      "priority:medium": "priority:medium",
+      "priority:high": "priority:high",
+      "priority:critical": "priority:critical"
+    },
+    "notifications": {
+      "enabled": true,
+      "showSuccess": true,
+      "showError": true,
+      "showProgress": true
+    },
+    "templates": {
+      "issue": ".cursor/snippets/bug-report.json",
+      "quick": ".cursor/snippets/bug-report.json"
+    }
+  }
+}

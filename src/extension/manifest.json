@@ -10,8 +10,17 @@
   },
   "content_scripts": [
     {
+<<<<<<< HEAD
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+=======
       "matches": ["<all_urls>"],
       "js": ["content.js"],
+>>>>>>> origin/main
       "run_at": "document_end"
     }
   ],
@@ -33,8 +42,19 @@
   },
   "web_accessible_resources": [
     {
+<<<<<<< HEAD
+      "resources": [
+        "floating-button.html",
+        "logs.html",
+        "report.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+=======
       "resources": ["floating-button.html", "logs.html", "report.html"],
       "matches": ["<all_urls>"]
+>>>>>>> origin/main
     }
   ]
 }

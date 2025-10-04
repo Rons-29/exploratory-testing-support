@@ -403,8 +403,12 @@ class ContentScript {
         url: window.location.href
       };
       console.log('Content Script: Sending SAVE_LOG message with entry:', entry);
-      await chrome.runtime.sendMessage({ type: 'SAVE_LOG', entry });
-      console.log('Content Script: SAVE_LOG message sent successfully');
+      try {
+        const response = await chrome.runtime.sendMessage({ type: 'SAVE_LOG', entry });
+        console.log('Content Script: SAVE_LOG message sent successfully, response:', response);
+      } catch (error) {
+        console.error('Content Script: Failed to send SAVE_LOG message:', error);
+      }
     } catch (error) {
       console.error('Content Script: Failed to delegate save log:', error);
     }

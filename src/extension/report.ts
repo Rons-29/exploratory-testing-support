@@ -64,22 +64,32 @@ class ReportViewer {
 
   private async loadReport(): Promise<void> {
     try {
+      console.log('Report: Sending EXPORT_REPORT message to background script...');
       // バックグラウンドスクリプトからレポートを取得
       const response = await chrome.runtime.sendMessage({ type: 'EXPORT_REPORT' });
+      console.log('Report: Received response from background script:', response);
       
       if (response && response.success) {
+        const logs = response.logs || [];
+        console.log('Raw logs from background:', logs);
+        console.log('Logs length:', logs.length);
+        const stats = this.calculateStats(logs);
+        console.log('Calculated stats:', stats);
+        
         this.reportData = {
           sessionId: 'N/A',
           startTime: 'N/A',
           endTime: 'N/A',
           duration: 0,
-          stats: this.calculateStats(response.logs || []),
+          stats: stats,
           report: response.report || 'レポートが生成されませんでした'
         };
         
+        console.log('Report data loaded:', this.reportData);
         this.displayReport();
         this.updateStats();
       } else {
+        console.error('Report: Failed to get report from background script:', response);
         this.showError('レポートの取得に失敗しました: ' + (response?.error || 'Unknown error'));
       }
     } catch (error) {
@@ -115,9 +125,13 @@ class ReportViewer {
   }
 
   private updateStats(): void {
-    if (!this.reportData) return;
+    if (!this.reportData) {
+      console.log('Report data is null, cannot update stats');
+      return;
+    }
 
     const stats = this.reportData.stats;
+    console.log('Updating stats with data:', stats);
     
     this.updateStatElement('totalEvents', stats.total);
     this.updateStatElement('clickEvents', stats.click);

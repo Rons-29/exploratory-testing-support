@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:extension\" \"npm run dev:backend\"",
     "dev:extension": "webpack --config config/webpack.config.js --mode development --watch",
+    "dev:extension:reload": "webpack --config config/webpack.config.js --mode development --watch && node scripts/extension-reloader.js",
+    "dev:extension:auto": "concurrently \"webpack --config config/webpack.config.js --mode development --watch\" \"node scripts/chrome-extension-reloader.js\"",
     "dev:backend": "nodemon --exec ts-node --project tsconfig.backend.json src/backend/index.ts",
     "build": "npm run build:extension && npm run build:backend",
     "build:extension": "webpack --config config/webpack.config.js --mode production",

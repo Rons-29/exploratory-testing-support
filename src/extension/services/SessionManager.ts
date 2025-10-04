@@ -98,11 +98,17 @@ export class SessionManager {
   }
 
   public async getCurrentSession(): Promise<SessionData | null> {
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
     return this.currentSession;
   }
 
   public async addEvent(event: any): Promise<void> {
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
+    
     if (!this.currentSession || this.currentSession.status !== SessionStatus.ACTIVE) {
+      console.log('SessionManager: addEvent - session not active, skipping event');
       return;
     }
 
@@ -113,6 +119,7 @@ export class SessionManager {
     });
 
     await this.saveSessionToStorage();
+    console.log('SessionManager: addEvent - event added, total events:', this.currentSession.events.length);
   }
 
   public async addScreenshot(screenshotData: string): Promise<string> {

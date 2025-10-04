@@ -115,6 +115,7 @@ class BackgroundService {
           return true; // 非同期処理のため
         case 'SAVE_LOG':
           console.log('探索的テスト支援: Saving log entry...');
+          console.log('探索的テスト支援: SAVE_LOG message received:', message);
           this.handleSaveLog(message, sendResponse);
           return true; // 非同期処理のため
         case 'CLEAR_LOGS':
@@ -271,9 +272,9 @@ class BackgroundService {
 
   private async handleGetStats(sendResponse: (response?: any) => void): Promise<void> {
     try {
-      // ストレージからログを取得して統計を計算
-      const result = await chrome.storage.local.get('test_logs');
-      const logs = result.test_logs || [];
+      // SessionManagerから現在のセッションを取得して統計を計算
+      const sessionData = await this.sessionManager.getCurrentSession();
+      const logs = sessionData?.events || [];
       
       const stats = {
         eventCount: logs.length,
@@ -287,7 +288,7 @@ class BackgroundService {
         flagCount: logs.filter((log: any) => log.type === 'flag').length
       };
       
-      console.log('Background: Stats calculated:', stats);
+      console.log('Background: Stats calculated from session:', stats);
       sendResponse({ success: true, stats });
     } catch (error) {
       console.error('Background: Failed to get stats:', error);
@@ -297,20 +298,31 @@ class BackgroundService {
 
   private async handleExportReport(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
-      // ストレージからログを取得
-      const result = await chrome.storage.local.get('test_logs');
-      const logs = result.test_logs || [];
+      console.log('Background: handleExportReport called');
       
+      // SessionManagerから現在のセッションを取得
+      const sessionData = await this.sessionManager.getCurrentSession();
+      console.log('Background: Session data retrieved:', sessionData);
+      
+      let logs = sessionData?.events || [];
+      console.log('Background: Events from session:', logs.length);
+      
+      // もしセッションからのログが空の場合、test_logsも確認
       if (logs.length === 0) {
-        sendResponse({ success: false, error: 'No logs available for export' });
-        return;
+        const storageData = await chrome.storage.local.get('test_logs');
+        logs = storageData.test_logs || [];
+        console.log('Background: Retrieved', logs.length, 'logs from test_logs');
       }
-
+      
+      console.log('Background: Total logs to export:', logs.length);
+      console.log('Background: First few logs:', logs.slice(0, 3));
+      
       // 簡単なMarkdownレポートを生成
       const report = this.generateMarkdownReport(logs);
       
-      // レポートをポップアップに送信してクリップボードにコピー
-      sendResponse({ success: true, report });
+      // レポートとログデータを送信
+      console.log('Background: Sending response with', logs.length, 'logs');
+      sendResponse({ success: true, report, logs });
     } catch (error) {
       console.error('Background: Failed to export report:', error);
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
@@ -749,13 +761,24 @@ class BackgroundService {
   private async handleSaveLog(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       console.log('Background: SAVE_LOG received, message:', message);
-      const entry = message.entry;
+      console.log('Background: Message type:', message.type);
+      console.log('Background: Message entry:', message.entry);
+      console.log('Background: Message logEntry:', message.logEntry);
+      
+      const entry = message.entry || message.logEntry;
       if (!entry) {
         console.log('Background: No entry provided in SAVE_LOG message');
         sendResponse({ success: false, error: 'No entry provided' });
         return;
       }
       console.log('Background: Processing log entry:', entry);
+      
+      // SessionManagerにログを追加
+      console.log('Background: Adding event to SessionManager...');
+      await this.sessionManager.addEvent(entry);
+      console.log('Background: Event added to SessionManager');
+      
+      // また、chrome.storage.localにも保存（後方互換性のため）
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(entry);
@@ -763,7 +786,8 @@ class BackgroundService {
         logs.splice(0, logs.length - 1000);
       }
       await chrome.storage.local.set({ test_logs: logs });
-      console.log('Background: Log saved successfully, total logs:', logs.length);
+      
+      console.log('Background: Log saved successfully to both session and storage');
       sendResponse({ success: true });
     } catch (error) {
       console.error('Background: Failed to save log:', error);
@@ -788,7 +812,11 @@ try {
 // メッセージハンドラーを直接設定（フォールバック）
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('探索的テスト支援: Direct message handler received:', message.type);
+  console.log('探索的テスト支援: backgroundService available:', !!backgroundService);
+  console.log('探索的テスト支援: handleMessage function available:', !!(backgroundService && typeof backgroundService.handleMessage === 'function'));
+  
   if (backgroundService && typeof backgroundService.handleMessage === 'function') {
+    console.log('探索的テスト支援: Calling backgroundService.handleMessage...');
     return backgroundService.handleMessage(message, sender, sendResponse);
   } else {
     console.error('探索的テスト支援: Background service not available');
@@ -798,3 +826,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 console.log('探索的テスト支援: Background service setup complete');
+console.log('探索的テスト支援: Background script loaded and ready');

@@ -97,6 +97,20 @@ export class SessionManager {
     console.log('SessionManager: Session cleared');
   }
 
+  public async clearAllData(): Promise<void> {
+    try {
+      // セッションデータをクリア
+      await this.clearSession();
+      
+      // ログデータもクリア
+      await chrome.storage.local.remove('test_logs');
+      
+      console.log('SessionManager: All data cleared');
+    } catch (error) {
+      console.error('Failed to clear all data:', error);
+    }
+  }
+
   public async getCurrentSession(): Promise<SessionData | null> {
     // ストレージから最新の状態を読み込み
     await this.loadSessionFromStorage();
@@ -202,7 +216,31 @@ export class SessionManager {
     try {
       const result = await chrome.storage.local.get(this.sessionStorageKey);
       if (result[this.sessionStorageKey]) {
-        this.currentSession = result[this.sessionStorageKey];
+        const sessionData = result[this.sessionStorageKey];
+        
+        // 日付フィールドを安全に復元
+        if (sessionData.startTime) {
+          if (typeof sessionData.startTime === 'string') {
+            const startDate = new Date(sessionData.startTime);
+            sessionData.startTime = isNaN(startDate.getTime()) ? null : startDate;
+          } else if (sessionData.startTime instanceof Date) {
+            // 既にDateオブジェクトの場合はそのまま
+            sessionData.startTime = isNaN(sessionData.startTime.getTime()) ? null : sessionData.startTime;
+          }
+        }
+        
+        if (sessionData.endTime) {
+          if (typeof sessionData.endTime === 'string') {
+            const endDate = new Date(sessionData.endTime);
+            sessionData.endTime = isNaN(endDate.getTime()) ? null : endDate;
+          } else if (sessionData.endTime instanceof Date) {
+            // 既にDateオブジェクトの場合はそのまま
+            sessionData.endTime = isNaN(sessionData.endTime.getTime()) ? null : sessionData.endTime;
+          }
+        }
+        
+        this.currentSession = sessionData;
+        console.log('SessionManager: Session loaded from storage:', this.currentSession);
       }
     } catch (error) {
       console.error('Failed to load session from storage:', error);

@@ -8,10 +8,17 @@ class PopupController {
   private sessionId: string | null = null;
   private sessionStartTime: Date | null = null;
   private timerInterval: NodeJS.Timeout | null = null;
+  private statsUpdateInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.sessionManager = new SessionManager();
     this.apiClient = new ApiClient();
+  }
+
+  // デストラクタでタイマーをクリーンアップ
+  public destroy(): void {
+    this.stopTimer();
+    this.stopStatsUpdate();
   }
 
   public initialize(): void {
@@ -68,19 +75,60 @@ class PopupController {
 
   private async loadSessionStatus(): Promise<void> {
     try {
+      // 拡張機能のコンテキストが有効かチェック
+      if (!chrome.runtime?.id) {
+        console.log('Extension context invalidated, cannot load session status');
+        this.showNotification('拡張機能が無効です。ページを再読み込みしてください。', 'error');
+        return;
+      }
+
       console.log('Loading session status...');
       const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
       console.log('Session status response:', response);
+      
       if (response && response.success) {
         this.isSessionActive = response.isActive;
         this.sessionId = response.sessionData?.id || null;
-        this.sessionStartTime = response.sessionData?.startTime || null;
+        
+        // セッション開始時間を安全に処理
+        if (this.isSessionActive && response.sessionData?.startTime) {
+          try {
+            this.sessionStartTime = new Date(response.sessionData.startTime);
+            // 有効な日付かチェック
+            if (isNaN(this.sessionStartTime.getTime())) {
+              console.warn('Invalid startTime:', response.sessionData.startTime);
+              this.sessionStartTime = null;
+            } else {
+              this.startTimer();
+              console.log('Popup: Session started at:', this.sessionStartTime);
+            }
+          } catch (error) {
+            console.error('Failed to parse startTime:', error);
+            this.sessionStartTime = null;
+          }
+        } else {
+          this.sessionStartTime = null;
+          this.stopTimer();
+        }
+        
         this.updateUI();
+        this.updateStats();
       } else {
         console.log('No active session or invalid response');
+        this.isSessionActive = false;
+        this.sessionId = null;
+        this.sessionStartTime = null;
+        this.stopTimer();
+        this.updateUI();
       }
     } catch (error) {
       console.error('Failed to load session status:', error);
+      // エラー時は安全な状態にリセット
+      this.isSessionActive = false;
+      this.sessionId = null;
+      this.sessionStartTime = null;
+      this.stopTimer();
+      this.updateUI();
     }
   }
 
@@ -93,10 +141,18 @@ class PopupController {
         return;
       }
 
-      console.log('Toggling session...');
+      console.log('🐛 DEBUG: Toggling session...');
+      console.log('🐛 DEBUG: Current session state:', this.isSessionActive);
+      console.log('🐛 DEBUG: Current session ID:', this.sessionId);
+      
       const response = await chrome.runtime.sendMessage({ type: 'TOGGLE_SESSION' });
-      console.log('Toggle session response:', response);
+      console.log('🐛 DEBUG: Toggle session response:', response);
+      
       if (response && response.success) {
+        console.log('🐛 DEBUG: Toggle successful, updating state...');
+        console.log('🐛 DEBUG: New session state:', response.isActive);
+        console.log('🐛 DEBUG: New session ID:', response.sessionId);
+        
         // Background Scriptから返された状態を使用
         this.isSessionActive = response.isActive;
         
@@ -104,19 +160,24 @@ class PopupController {
           this.sessionId = response.sessionId;
           this.sessionStartTime = new Date();
           this.startTimer();
+          console.log('🐛 DEBUG: Session started, timer started');
         } else {
           this.sessionId = null;
           this.sessionStartTime = null;
           this.stopTimer();
+          console.log('🐛 DEBUG: Session stopped, timer stopped');
         }
+        
+        console.log('🐛 DEBUG: Updating UI...');
         this.updateUI();
         this.updateStats(); // 統計情報も更新
+        console.log('🐛 DEBUG: UI updated');
       } else {
-        console.log('Failed to toggle session:', response);
+        console.log('🐛 DEBUG: Failed to toggle session:', response);
         this.showNotification('セッションの切り替えに失敗しました', 'error');
       }
     } catch (error) {
-      console.error('Failed to toggle session:', error);
+      console.error('🐛 DEBUG: Failed to toggle session:', error);
       this.showNotification('セッションの切り替えに失敗しました', 'error');
     }
   }
@@ -212,6 +273,8 @@ class PopupController {
   }
 
   private updateUI(): void {
+    console.log('🐛 DEBUG: updateUI called, isSessionActive:', this.isSessionActive);
+    
     const statusIndicator = document.getElementById('statusIndicator');
     const statusDot = statusIndicator?.querySelector('.status-dot');
     const statusText = statusIndicator?.querySelector('.status-text');
@@ -220,7 +283,18 @@ class PopupController {
     const sessionId = document.getElementById('sessionId');
     const quickActions = document.querySelectorAll('.quick-actions .btn');
 
+    console.log('🐛 DEBUG: UI elements found:', {
+      statusIndicator: !!statusIndicator,
+      statusDot: !!statusDot,
+      statusText: !!statusText,
+      toggleButton: !!toggleButton,
+      sessionInfo: !!sessionInfo,
+      sessionId: !!sessionId,
+      quickActions: quickActions.length
+    });
+
     if (this.isSessionActive) {
+      console.log('🐛 DEBUG: Setting UI to ACTIVE state');
       // アクティブ状態
       statusDot?.classList.remove('inactive');
       statusDot?.classList.add('active');
@@ -235,7 +309,9 @@ class PopupController {
       if (sessionId) sessionId.textContent = this.sessionId || '-';
       
       quickActions.forEach(btn => btn.removeAttribute('disabled'));
+      console.log('🐛 DEBUG: UI set to ACTIVE state');
     } else {
+      console.log('🐛 DEBUG: Setting UI to INACTIVE state');
       // 非アクティブ状態
       statusDot?.classList.remove('active');
       statusDot?.classList.add('inactive');
@@ -249,6 +325,7 @@ class PopupController {
       if (sessionInfo) sessionInfo.style.display = 'none';
       
       quickActions.forEach(btn => btn.setAttribute('disabled', 'true'));
+      console.log('🐛 DEBUG: UI set to INACTIVE state');
     }
   }
 
@@ -262,6 +339,13 @@ class PopupController {
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
+    }
+  }
+
+  private stopStatsUpdate(): void {
+    if (this.statsUpdateInterval) {
+      clearInterval(this.statsUpdateInterval);
+      this.statsUpdateInterval = null;
     }
   }
 
@@ -306,21 +390,32 @@ class PopupController {
     } catch (error) {
       console.error('Failed to update stats:', error);
       // エラーが発生した場合は統計をリセット
-      document.getElementById('eventCount')!.textContent = '0';
-      document.getElementById('clickCount')!.textContent = '0';
-      document.getElementById('keydownCount')!.textContent = '0';
-      document.getElementById('consoleCount')!.textContent = '0';
-      document.getElementById('networkCount')!.textContent = '0';
-      document.getElementById('networkErrorCount')!.textContent = '0';
-      document.getElementById('errorCount')!.textContent = '0';
-      document.getElementById('screenshotCount')!.textContent = '0';
-      document.getElementById('flagCount')!.textContent = '0';
+      this.resetStats();
     }
   }
 
+  private resetStats(): void {
+    const statsElements = [
+      'eventCount', 'clickCount', 'keydownCount', 'consoleCount',
+      'networkCount', 'networkErrorCount', 'errorCount', 'screenshotCount', 'flagCount'
+    ];
+    
+    statsElements.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = '0';
+      }
+    });
+  }
+
   private startStatsUpdate(): void {
+    // 既存のタイマーをクリア
+    if (this.statsUpdateInterval) {
+      clearInterval(this.statsUpdateInterval);
+    }
+    
     // 5秒ごとに統計情報を更新
-    setInterval(() => {
+    this.statsUpdateInterval = setInterval(() => {
       this.updateStats();
     }, 5000);
   }
@@ -332,12 +427,18 @@ class PopupController {
 
   private async mcpAnalyze(): Promise<void> {
     try {
+      // 拡張機能のコンテキストが有効かチェック
+      if (!chrome.runtime?.id) {
+        this.showNotification('拡張機能が無効です。ページを再読み込みしてください。', 'error');
+        return;
+      }
+
       this.showNotification('AI分析を実行中...', 'info');
       
       // 現在のログを取得してコンテキストとして送信
       const logsResponse = await chrome.runtime.sendMessage({ type: 'GET_LOGS' });
       const context = {
-        logs: logsResponse.logs || [],
+        logs: logsResponse?.logs || [],
         sessionActive: this.isSessionActive,
         timestamp: Date.now()
       };
@@ -355,16 +456,22 @@ class PopupController {
         await this.saveAnalysisResult(response.data);
       } else {
         this.showNotification('AI分析に失敗しました', 'error');
-        console.error('MCP Analysis failed:', response);
+        console.error('MCP Analysis failed:', response?.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Failed to run MCP analysis:', error);
-      this.showNotification('AI分析に失敗しました', 'error');
+      this.showNotification('AI分析に失敗しました: ' + (error instanceof Error ? error.message : String(error)), 'error');
     }
   }
 
   private async mcpSnapshot(): Promise<void> {
     try {
+      // 拡張機能のコンテキストが有効かチェック
+      if (!chrome.runtime?.id) {
+        this.showNotification('拡張機能が無効です。ページを再読み込みしてください。', 'error');
+        return;
+      }
+
       this.showNotification('MCPスナップショットを取得中...', 'info');
       
       const response = await chrome.runtime.sendMessage({ type: 'MCP_SNAPSHOT' });
@@ -377,11 +484,11 @@ class PopupController {
         await this.saveSnapshotResult(response.data);
       } else {
         this.showNotification('MCPスナップショットの取得に失敗しました', 'error');
-        console.error('MCP Snapshot failed:', response);
+        console.error('MCP Snapshot failed:', response?.error || 'Unknown error');
       }
     } catch (error) {
       console.error('Failed to get MCP snapshot:', error);
-      this.showNotification('MCPスナップショットの取得に失敗しました', 'error');
+      this.showNotification('MCPスナップショットの取得に失敗しました: ' + (error instanceof Error ? error.message : String(error)), 'error');
     }
   }
 

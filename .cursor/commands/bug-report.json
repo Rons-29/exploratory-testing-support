@@ -1,0 +1,26 @@
+{
+  "name": "🐛 不具合報告システム",
+  "description": "不具合を発見した際に、詳細な情報を収集してGitHub Issueを自動作成します",
+  "command": "npm run bug-report",
+  "args": [],
+  "cwd": "${workspaceFolder}",
+  "env": {},
+  "icon": "🐛",
+  "category": "Bug Report",
+  "shortcut": "Ctrl+Shift+B",
+  "when": "always",
+  "output": "panel",
+  "presentation": {
+    "echo": true,
+    "reveal": "always",
+    "focus": false,
+    "panel": "new",
+    "showReuseMessage": true,
+    "clear": false
+  },
+  "problemMatcher": [],
+  "runOptions": {
+    "instanceLimit": 1,
+    "runOn": "folderOpen"
+  }
+}

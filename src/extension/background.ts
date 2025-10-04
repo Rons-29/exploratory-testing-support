@@ -122,6 +122,10 @@ class BackgroundService {
           console.log('探索的テスト支援: Clearing logs...');
           this.handleClearLogs(sendResponse);
           return true; // 非同期処理のため
+        case 'CLEAR_ALL_DATA':
+          console.log('探索的テスト支援: Clearing all data...');
+          this.handleClearAllData(sendResponse);
+          return true; // 非同期処理のため
         case 'MCP_CONNECT':
           console.log('探索的テスト支援: Connecting to MCP...');
           this.handleMCPConnect(sendResponse);
@@ -236,7 +240,48 @@ class BackgroundService {
       const isActive = await this.sessionManager.isActive();
       const sessionData = await this.sessionManager.getCurrentSession();
       console.log('Background: Session status - isActive:', isActive, 'sessionData:', sessionData);
-      sendResponse({ success: true, isActive, sessionData });
+      
+      // セッションデータを安全にフォーマット
+      const formatDate = (date: any): string | null => {
+        if (!date) return null;
+        
+        try {
+          let dateObj: Date;
+          if (date instanceof Date) {
+            dateObj = date;
+          } else if (typeof date === 'string') {
+            dateObj = new Date(date);
+          } else {
+            return null;
+          }
+          
+          // 有効な日付かチェック
+          if (isNaN(dateObj.getTime())) {
+            console.warn('Invalid date value:', date);
+            return null;
+          }
+          
+          return dateObj.toISOString();
+        } catch (error) {
+          console.error('Failed to format date:', error, 'date:', date);
+          return null;
+        }
+      };
+
+      const formattedSessionData = sessionData ? {
+        id: sessionData.id,
+        name: sessionData.name,
+        description: sessionData.description,
+        status: sessionData.status,
+        startTime: formatDate(sessionData.startTime),
+        endTime: formatDate(sessionData.endTime),
+        events: sessionData.events,
+        screenshots: sessionData.screenshots,
+        flags: sessionData.flags,
+        metadata: sessionData.metadata
+      } : null;
+      
+      sendResponse({ success: true, isActive, sessionData: formattedSessionData });
     } catch (error) {
       console.error('Background: Failed to get session status:', error);
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
@@ -712,9 +757,11 @@ class BackgroundService {
 
   private async handleMCPAnalyze(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const context = message.context || {};
-      const result = await this.devToolsMCP.analyzeWithAI(context);
-      sendResponse(result);
+      // MCP機能は一時的に無効化
+      sendResponse({ 
+        success: false, 
+        error: 'MCP機能は現在利用できません。Chrome DevTools MCPサーバーが起動していない可能性があります。' 
+      });
     } catch (error) {
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -722,8 +769,11 @@ class BackgroundService {
 
   private async handleMCPSnapshot(sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const result = await this.devToolsMCP.getBrowserSnapshot();
-      sendResponse(result);
+      // MCP機能は一時的に無効化
+      sendResponse({ 
+        success: false, 
+        error: 'MCP機能は現在利用できません。Chrome DevTools MCPサーバーが起動していない可能性があります。' 
+      });
     } catch (error) {
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
@@ -753,6 +803,15 @@ class BackgroundService {
     try {
       await chrome.storage.local.remove('test_logs');
       sendResponse({ success: true, message: 'Logs cleared' });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleClearAllData(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      await this.sessionManager.clearAllData();
+      sendResponse({ success: true, message: 'All data cleared' });
     } catch (error) {
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }

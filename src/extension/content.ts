@@ -16,10 +16,17 @@ class ContentScript {
 
   public async initialize(): Promise<void> {
     console.log('探索的テスト支援: Content script initialized');
+<<<<<<< HEAD
     
     // 初期化時にセッション状態を確認
     await this.checkSessionStatus();
     
+=======
+
+    // 初期化時にセッション状態を確認
+    await this.checkSessionStatus();
+
+>>>>>>> origin/main
     // ページ読み込み完了後に初期化
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => this.setup());
@@ -74,9 +81,19 @@ class ContentScript {
       const isActive = status === 'active' || status === 'ACTIVE';
       this.isSessionActive = Boolean(isActive);
       this.floatingButton.updateSessionStatus(this.isSessionActive);
+<<<<<<< HEAD
       console.log('Content Script: Fallback session status =', this.isSessionActive, 'status =', status);
     }
     catch (e) {
+=======
+      console.log(
+        'Content Script: Fallback session status =',
+        this.isSessionActive,
+        'status =',
+        status
+      );
+    } catch (e) {
+>>>>>>> origin/main
       console.error('Content Script: Fallback session status check failed:', e);
     }
   }
@@ -84,20 +101,28 @@ class ContentScript {
   private setup(): void {
     // フローティングボタンを追加
     this.floatingButton.create();
-    
+
     // イベントトラッキングを開始
     this.startEventTracking();
-    
+
     // コンソールログの監視を開始
     this.startConsoleMonitoring();
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/main
     // ネットワーク監視を開始
     this.startNetworkMonitoring();
   }
 
   private startEventTracking(): void {
     // クリックイベント
+<<<<<<< HEAD
     document.addEventListener('click', (event) => {
+=======
+    document.addEventListener('click', event => {
+>>>>>>> origin/main
       console.log('Content Script: Click event detected, isSessionActive =', this.isSessionActive);
       if (this.isSessionActive) {
         console.log('Content Script: Saving click log...');
@@ -105,7 +130,11 @@ class ContentScript {
         this.saveLog('click', `クリック: ${(event.target as Element)?.tagName}`, {
           target: (event.target as Element)?.tagName,
           x: (event as MouseEvent).clientX,
+<<<<<<< HEAD
           y: (event as MouseEvent).clientY
+=======
+          y: (event as MouseEvent).clientY,
+>>>>>>> origin/main
         });
       } else {
         console.log('Content Script: Session not active, skipping click log');
@@ -113,7 +142,7 @@ class ContentScript {
     });
 
     // キーボードイベント
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener('keydown', event => {
       if (this.isSessionActive) {
         this.eventTracker.trackKeydown(event);
         this.saveLog('keydown', `キー入力: ${event.key}`, {
@@ -121,20 +150,24 @@ class ContentScript {
           code: event.code,
           ctrlKey: event.ctrlKey,
           shiftKey: event.shiftKey,
+<<<<<<< HEAD
           altKey: event.altKey
+=======
+          altKey: event.altKey,
+>>>>>>> origin/main
         });
       }
     });
 
     // マウス移動イベント
-    document.addEventListener('mousemove', (event) => {
+    document.addEventListener('mousemove', event => {
       if (this.isSessionActive) {
         this.eventTracker.trackMouseMove(event);
       }
     });
 
     // フォーカスイベント
-    document.addEventListener('focusin', (event) => {
+    document.addEventListener('focusin', event => {
       if (this.isSessionActive) {
         this.eventTracker.trackFocus(event);
       }
@@ -159,7 +192,11 @@ class ContentScript {
         this.eventTracker.trackConsoleLog('log', args);
         this.saveLog('console', `ログ: ${args.join(' ')}`, {
           level: 'log',
+<<<<<<< HEAD
           args: args
+=======
+          args: args,
+>>>>>>> origin/main
         });
       }
       originalLog.apply(console, args);
@@ -170,7 +207,11 @@ class ContentScript {
         this.eventTracker.trackConsoleLog('error', args);
         this.saveLog('error', `エラー: ${args.join(' ')}`, {
           level: 'error',
+<<<<<<< HEAD
           args: args
+=======
+          args: args,
+>>>>>>> origin/main
         });
       }
       originalError.apply(console, args);
@@ -181,7 +222,11 @@ class ContentScript {
         this.eventTracker.trackConsoleLog('warn', args);
         this.saveLog('console', `警告: ${args.join(' ')}`, {
           level: 'warn',
+<<<<<<< HEAD
           args: args
+=======
+          args: args,
+>>>>>>> origin/main
         });
       }
       originalWarn.apply(console, args);
@@ -193,16 +238,28 @@ class ContentScript {
     const originalFetch = window.fetch;
     const self = this;
 
+<<<<<<< HEAD
     window.fetch = async function(...args) {
       const startTime = Date.now();
       const url = args[0] instanceof Request ? args[0].url : args[0];
       const method = args[0] instanceof Request ? args[0].method : (args[1]?.method || 'GET');
       
+=======
+    window.fetch = async function (...args) {
+      const startTime = Date.now();
+      const url = args[0] instanceof Request ? args[0].url : args[0];
+      const method = args[0] instanceof Request ? args[0].method : args[1]?.method || 'GET';
+
+>>>>>>> origin/main
       try {
         const response = await originalFetch.apply(this, args);
         const endTime = Date.now();
         const duration = endTime - startTime;
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> origin/main
         if (self.isSessionActive) {
           self.saveLog('network', `ネットワークリクエスト: ${method} ${url}`, {
             url: url,
@@ -211,25 +268,43 @@ class ContentScript {
             statusText: response.statusText,
             duration: duration,
             headers: Object.fromEntries(response.headers.entries()),
+<<<<<<< HEAD
             timestamp: startTime
           });
         }
         
+=======
+            timestamp: startTime,
+          });
+        }
+
+>>>>>>> origin/main
         return response;
       } catch (error) {
         const endTime = Date.now();
         const duration = endTime - startTime;
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> origin/main
         if (self.isSessionActive) {
           self.saveLog('network_error', `ネットワークエラー: ${method} ${url}`, {
             url: url,
             method: method,
             error: error instanceof Error ? error.message : String(error),
             duration: duration,
+<<<<<<< HEAD
             timestamp: startTime
           });
         }
         
+=======
+            timestamp: startTime,
+          });
+        }
+
+>>>>>>> origin/main
         throw error;
       }
     };
@@ -238,14 +313,28 @@ class ContentScript {
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
 
+<<<<<<< HEAD
     XMLHttpRequest.prototype.open = function(method: string, url: string | URL, async: boolean = true, username?: string | null, password?: string | null) {
+=======
+    XMLHttpRequest.prototype.open = function (
+      method: string,
+      url: string | URL,
+      async: boolean = true,
+      username?: string | null,
+      password?: string | null
+    ) {
+>>>>>>> origin/main
       (this as any)._testMethod = method;
       (this as any)._testUrl = url.toString();
       (this as any)._testStartTime = Date.now();
       return originalXHROpen.call(this, method, url, async, username, password);
     };
 
+<<<<<<< HEAD
     XMLHttpRequest.prototype.send = function(body?: any) {
+=======
+    XMLHttpRequest.prototype.send = function (body?: any) {
+>>>>>>> origin/main
       const xhr = this as any;
       const method = xhr._testMethod;
       const url = xhr._testUrl;
@@ -254,7 +343,11 @@ class ContentScript {
       xhr.addEventListener('loadend', () => {
         const endTime = Date.now();
         const duration = endTime - startTime;
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> origin/main
         if (self.isSessionActive) {
           self.saveLog('network', `XHRリクエスト: ${method} ${url}`, {
             url: url,
@@ -263,7 +356,11 @@ class ContentScript {
             statusText: xhr.statusText,
             duration: duration,
             responseType: xhr.responseType,
+<<<<<<< HEAD
             timestamp: startTime
+=======
+            timestamp: startTime,
+>>>>>>> origin/main
           });
         }
       });
@@ -271,14 +368,22 @@ class ContentScript {
       xhr.addEventListener('error', () => {
         const endTime = Date.now();
         const duration = endTime - startTime;
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> origin/main
         if (self.isSessionActive) {
           self.saveLog('network_error', `XHRエラー: ${method} ${url}`, {
             url: url,
             method: method,
             error: 'Network error',
             duration: duration,
+<<<<<<< HEAD
             timestamp: startTime
+=======
+            timestamp: startTime,
+>>>>>>> origin/main
           });
         }
       });
@@ -340,13 +445,17 @@ class ContentScript {
 
   private toggleSession(): void {
     chrome.runtime.sendMessage({
-      type: this.isSessionActive ? 'STOP_SESSION' : 'START_SESSION'
+      type: this.isSessionActive ? 'STOP_SESSION' : 'START_SESSION',
     });
   }
 
   private takeScreenshot(): void {
     chrome.runtime.sendMessage({
-      type: 'TAKE_SCREENSHOT'
+      type: 'TAKE_SCREENSHOT',
+    });
+    this.saveLog('screenshot', 'スクリーンショットを撮影しました', {
+      url: window.location.href,
+      timestamp: Date.now(),
     });
     this.saveLog('screenshot', 'スクリーンショットを撮影しました', {
       url: window.location.href,
@@ -361,25 +470,46 @@ class ContentScript {
       chrome.runtime.sendMessage({
         type: 'FLAG_EVENT',
         eventId: lastEvent.id,
+<<<<<<< HEAD
         note: note
+=======
+        note: note,
+>>>>>>> origin/main
       });
       this.saveLog('flag', `フラグを設定: ${note}`, {
         eventId: lastEvent.id,
         note: note,
+<<<<<<< HEAD
         url: window.location.href
+=======
+        url: window.location.href,
+>>>>>>> origin/main
       });
     }
   }
 
+<<<<<<< HEAD
   private async saveSessionToApi(sessionData: any, sendResponse: (response?: any) => void): Promise<void> {
+=======
+  private async saveSessionToApi(
+    sessionData: any,
+    sendResponse: (response?: any) => void
+  ): Promise<void> {
+>>>>>>> origin/main
     try {
       console.log('Content: Saving session to API:', sessionData);
       const response = await fetch('http://localhost:3001/api/sessions/extension', {
         method: 'POST',
         headers: {
+<<<<<<< HEAD
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(sessionData)
+=======
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sessionData),
+>>>>>>> origin/main
       });
 
       const result = await response.json();
@@ -387,7 +517,14 @@ class ContentScript {
       sendResponse({ success: true, result });
     } catch (error) {
       console.error('Content: API save failed:', error);
+<<<<<<< HEAD
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+=======
+      sendResponse({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+>>>>>>> origin/main
     }
   }
 
@@ -400,7 +537,11 @@ class ContentScript {
         message,
         timestamp: Date.now(),
         details,
+<<<<<<< HEAD
         url: window.location.href
+=======
+        url: window.location.href,
+>>>>>>> origin/main
       };
       console.log('Content Script: Sending SAVE_LOG message with entry:', entry);
       try {

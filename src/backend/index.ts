@@ -58,10 +58,12 @@ class BackendServer {
     this.app.use(helmet());
 
     // CORS設定
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-      credentials: true
-    }));
+    this.app.use(
+      cors({
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+        credentials: true,
+      })
+    );
 
     // JSONパーサー
     this.app.use(express.json({ limit: '10mb' }));
@@ -71,7 +73,7 @@ class BackendServer {
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       this.logger.info(`${req.method} ${req.url}`, {
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get('User-Agent'),
       });
       next();
     });
@@ -111,14 +113,14 @@ class BackendServer {
     // エラーハンドリングミドルウェア
     this.app.use((error: any, req: Request, res: Response, next: NextFunction) => {
       this.logger.error('Unhandled error:', error);
-      
+
       if (res.headersSent) {
         return next(error);
       }
 
       res.status(error.status || 500).json({
         error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message,
-        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }),
       });
     });
 
@@ -136,7 +138,7 @@ class BackendServer {
 
   private async gracefulShutdown(): Promise<void> {
     this.logger.info('Shutting down server...');
-    
+
     try {
       await this.databaseManager.disconnect();
       this.logger.info('Database disconnected');
@@ -150,7 +152,7 @@ class BackendServer {
 
 // サーバーを起動
 const server = new BackendServer();
-server.initialize().catch((error) => {
+server.initialize().catch(error => {
   console.error('Failed to start server:', error);
   process.exit(1);
 });

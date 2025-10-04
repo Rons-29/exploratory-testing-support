@@ -199,13 +199,56 @@ export class SessionManager {
   }
 
   private async loadSessionFromStorage(): Promise<void> {
+    console.log('SessionManager: Attempting to load session from storage...');
     try {
       const result = await chrome.storage.local.get(this.sessionStorageKey);
       if (result[this.sessionStorageKey]) {
-        this.currentSession = result[this.sessionStorageKey];
+        const sessionData = result[this.sessionStorageKey];
+        console.log('SessionManager: Raw session data from storage:', sessionData);
+        
+        // 日付フィールドを安全に復元
+        if (sessionData.startTime) {
+          console.log('SessionManager: Processing startTime:', sessionData.startTime, 'type:', typeof sessionData.startTime);
+          if (typeof sessionData.startTime === 'string') {
+            const startDate = new Date(sessionData.startTime);
+            sessionData.startTime = isNaN(startDate.getTime()) ? null : startDate;
+            console.log('SessionManager: Parsed startTime (string):', sessionData.startTime);
+          } else if (sessionData.startTime instanceof Date) {
+            // 既にDateオブジェクトの場合はそのまま
+            sessionData.startTime = isNaN(sessionData.startTime.getTime()) ? null : sessionData.startTime;
+            console.log('SessionManager: Parsed startTime (Date):', sessionData.startTime);
+          } else {
+            // シリアライズされたオブジェクトの場合は無視
+            console.log('SessionManager: Ignoring serialized startTime object');
+            sessionData.startTime = null;
+          }
+        }
+        
+        if (sessionData.endTime) {
+          console.log('SessionManager: Processing endTime:', sessionData.endTime, 'type:', typeof sessionData.endTime);
+          if (typeof sessionData.endTime === 'string') {
+            const endDate = new Date(sessionData.endTime);
+            sessionData.endTime = isNaN(endDate.getTime()) ? null : endDate;
+            console.log('SessionManager: Parsed endTime (string):', sessionData.endTime);
+          } else if (sessionData.endTime instanceof Date) {
+            sessionData.endTime = isNaN(sessionData.endTime.getTime()) ? null : sessionData.endTime;
+            console.log('SessionManager: Parsed endTime (Date):', sessionData.endTime);
+          } else {
+            // シリアライズされたオブジェクトの場合は無視
+            console.log('SessionManager: Ignoring serialized endTime object');
+            sessionData.endTime = null;
+          }
+        }
+        
+        this.currentSession = sessionData;
+        console.log('SessionManager: Session loaded successfully:', this.currentSession);
+      } else {
+        console.log('SessionManager: No session found in storage.');
+        this.currentSession = null;
       }
     } catch (error) {
-      console.error('Failed to load session from storage:', error);
+      console.error('SessionManager: Error loading session from storage:', error);
+      this.currentSession = null;
     }
   }
 

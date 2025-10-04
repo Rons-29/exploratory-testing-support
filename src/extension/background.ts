@@ -1,18 +1,18 @@
 import { SessionManager } from './services/SessionManager';
-import { ApiClient } from './services/ApiClient';
-import { DevToolsMCP } from './services/DevToolsMCP';
+// import { ApiClient } from './services/ApiClient'; // 軽量化のため一時的に無効化
+// import { DevToolsMCP } from './services/DevToolsMCP'; // 軽量化のため一時的に無効化
 
 class BackgroundService {
   private sessionManager: SessionManager;
-  private apiClient: ApiClient;
-  private devToolsMCP: DevToolsMCP;
+  // private apiClient: ApiClient; // 軽量化のため一時的に無効化
+  // private devToolsMCP: DevToolsMCP; // 軽量化のため一時的に無効化
   private devToolsAttached: Set<number> = new Set();
   private networkRequests: Map<number, any[]> = new Map();
 
   constructor() {
     this.sessionManager = new SessionManager();
-    this.apiClient = new ApiClient();
-    this.devToolsMCP = new DevToolsMCP();
+    // this.apiClient = new ApiClient(); // 軽量化のため一時的に無効化
+    // this.devToolsMCP = new DevToolsMCP(); // 軽量化のため一時的に無効化
   }
 
   public initialize(): void {
@@ -126,18 +126,19 @@ class BackgroundService {
           console.log('探索的テスト支援: Clearing logs...');
           this.handleClearLogs(sendResponse);
           return true; // 非同期処理のため
-        case 'MCP_CONNECT':
-          console.log('探索的テスト支援: Connecting to MCP...');
-          this.handleMCPConnect(sendResponse);
-          return true; // 非同期処理のため
-        case 'MCP_ANALYZE':
-          console.log('探索的テスト支援: Analyzing with MCP...');
-          this.handleMCPAnalyze(message, sendResponse);
-          return true; // 非同期処理のため
-        case 'MCP_SNAPSHOT':
-          console.log('探索的テスト支援: Getting MCP snapshot...');
-          this.handleMCPSnapshot(sendResponse);
-          return true; // 非同期処理のため
+        // MCP機能は軽量化のため一時的に無効化
+        // case 'MCP_CONNECT':
+        //   console.log('探索的テスト支援: Connecting to MCP...');
+        //   this.handleMCPConnect(sendResponse);
+        //   return true; // 非同期処理のため
+        // case 'MCP_ANALYZE':
+        //   console.log('探索的テスト支援: Analyzing with MCP...');
+        //   this.handleMCPAnalyze(message, sendResponse);
+        //   return true; // 非同期処理のため
+        // case 'MCP_SNAPSHOT':
+        //   console.log('探索的テスト支援: Getting MCP snapshot...');
+        //   this.handleMCPSnapshot(sendResponse);
+        //   return true; // 非同期処理のため
         default:
           console.warn('探索的テスト支援: Unknown message type:', message.type);
           sendResponse({ success: false, error: 'Unknown message type' });
@@ -178,7 +179,7 @@ class BackgroundService {
   ): Promise<void> {
     try {
       const sessionData = await this.sessionManager.stopSession();
-      await this.apiClient.saveSession(sessionData);
+      // await this.apiClient.saveSession(sessionData); // 軽量化のため一時的に無効化
 
       // DevToolsをデタッチ
       await this.detachDevTools();
@@ -207,8 +208,8 @@ class BackgroundService {
 
         try {
           // Background Scriptで直接APIを呼び出し
-          const apiResponse = await this.apiClient.saveSession(sessionData);
-          console.log('Background: API save response:', apiResponse);
+          // const apiResponse = await this.apiClient.saveSession(sessionData); // 軽量化のため一時的に無効化
+          // console.log('Background: API save response:', apiResponse); // 軽量化のため一時的に無効化
         } catch (apiError) {
           console.error('Background: API save failed:', apiError);
           // API送信に失敗してもセッション停止は続行
@@ -280,8 +281,8 @@ class BackgroundService {
   ): Promise<void> {
     try {
       const screenshot = await this.captureScreenshot();
-      const screenshotId = await this.apiClient.uploadScreenshot(screenshot);
-      sendResponse({ success: true, screenshotId });
+      // const screenshotId = await this.apiClient.uploadScreenshot(screenshot); // 軽量化のため一時的に無効化
+      sendResponse({ success: true, screenshotId: 'disabled' }); // 軽量化のため一時的に無効化
     } catch (error) {
       sendResponse({
         success: false,
@@ -770,45 +771,46 @@ class BackgroundService {
     }
   }
 
-  private async handleMCPConnect(sendResponse: (response?: any) => void): Promise<void> {
-    try {
-      const isConnected = await this.devToolsMCP.testConnection();
-      sendResponse({ success: true, connected: isConnected });
-    } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+  // MCP機能は軽量化のため一時的に無効化
+  // private async handleMCPConnect(sendResponse: (response?: any) => void): Promise<void> {
+  //   try {
+  //     const isConnected = await this.devToolsMCP.testConnection();
+  //     sendResponse({ success: true, connected: isConnected });
+  //   } catch (error) {
+  //     sendResponse({
+  //       success: false,
+  //       error: error instanceof Error ? error.message : String(error),
+  //     });
+  //   }
+  // }
 
-  private async handleMCPAnalyze(
-    message: any,
-    sendResponse: (response?: any) => void
-  ): Promise<void> {
-    try {
-      const context = message.context || {};
-      const result = await this.devToolsMCP.analyzeWithAI(context);
-      sendResponse(result);
-    } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+  // private async handleMCPAnalyze(
+  //   message: any,
+  //   sendResponse: (response?: any) => void
+  // ): Promise<void> {
+  //   try {
+  //     const context = message.context || {};
+  //     const result = await this.devToolsMCP.analyzeWithAI(context);
+  //     sendResponse(result);
+  //   } catch (error) {
+  //     sendResponse({
+  //       success: false,
+  //       error: error instanceof Error ? error.message : String(error),
+  //     });
+  //   }
+  // }
 
-  private async handleMCPSnapshot(sendResponse: (response?: any) => void): Promise<void> {
-    try {
-      const result = await this.devToolsMCP.getBrowserSnapshot();
-      sendResponse(result);
-    } catch (error) {
-      sendResponse({
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+  // private async handleMCPSnapshot(sendResponse: (response?: any) => void): Promise<void> {
+  //   try {
+  //     const result = await this.devToolsMCP.getBrowserSnapshot();
+  //     sendResponse(result);
+  //   } catch (error) {
+  //     sendResponse({
+  //       success: false,
+  //       error: error instanceof Error ? error.message : String(error),
+  //     });
+  //   }
+  // }
 
   private async handleClearSession(sendResponse: (response?: any) => void): Promise<void> {
     try {

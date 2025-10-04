@@ -1,9 +1,9 @@
 import { SessionManager } from './services/SessionManager';
-import { ApiClient } from './services/ApiClient';
+// import { ApiClient } from './services/ApiClient'; // 軽量化のため一時的に無効化
 
 class PopupController {
   private sessionManager: SessionManager;
-  private apiClient: ApiClient;
+  // private apiClient: ApiClient; // 軽量化のため一時的に無効化
   private isSessionActive: boolean = false;
   private sessionId: string | null = null;
   private sessionStartTime: Date | null = null;
@@ -11,7 +11,7 @@ class PopupController {
 
   constructor() {
     this.sessionManager = new SessionManager();
-    this.apiClient = new ApiClient();
+    // this.apiClient = new ApiClient(); // 軽量化のため一時的に無効化
   }
 
   public initialize(): void {
@@ -53,12 +53,12 @@ class PopupController {
     const settingsButton = document.getElementById('openSettings');
     settingsButton?.addEventListener('click', () => this.openSettings());
 
-    // MCP連携ボタン
-    const mcpAnalyzeButton = document.getElementById('mcpAnalyze');
-    mcpAnalyzeButton?.addEventListener('click', () => this.mcpAnalyze());
+    // MCP連携ボタンは軽量化のため一時的に無効化
+    // const mcpAnalyzeButton = document.getElementById('mcpAnalyze');
+    // mcpAnalyzeButton?.addEventListener('click', () => this.mcpAnalyze());
 
-    const mcpSnapshotButton = document.getElementById('mcpSnapshot');
-    mcpSnapshotButton?.addEventListener('click', () => this.mcpSnapshot());
+    // const mcpSnapshotButton = document.getElementById('mcpSnapshot');
+    // mcpSnapshotButton?.addEventListener('click', () => this.mcpSnapshot());
 
     // キーボードショートカット
     document.addEventListener('keydown', e => {

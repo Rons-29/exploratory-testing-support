@@ -200,12 +200,12 @@ const mockService = {
 
 // メイン実行
 async function main() {
-  const debugger = new TestDebugger();
+  const testDebugger = new TestDebugger();
   
   console.log('🚀 テストデバッガーを開始します\n');
   
-  debugger.checkConfiguration();
-  await debugger.analyzeTests();
+  testDebugger.checkConfiguration();
+  await testDebugger.analyzeTests();
   
   console.log('✨ 分析完了！');
 }

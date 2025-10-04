@@ -64,8 +64,12 @@ class BackgroundService {
       // 直接メッセージを送信（PINGは不要）
       await chrome.tabs.sendMessage(tabId, message);
     } catch (error) {
-      // コンテンツスクリプトが存在しない場合は無視
-      console.log('Content script not available for tab:', tabId, error);
+      // コンテンツスクリプトが存在しない場合は無視（正常な動作）
+      if (error instanceof Error && error.message?.includes('Could not establish connection')) {
+        console.log('Content script not available for tab:', tabId, '(normal behavior)');
+      } else {
+        console.log('Content script error for tab:', tabId, error);
+      }
     }
   }
 
@@ -215,10 +219,14 @@ class BackgroundService {
           // API送信に失敗してもセッション停止は続行
         }
 
-        // コンテンツスクリプトにセッション停止を通知
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.id) {
-          await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STOPPED' });
+        // コンテンツスクリプトにセッション停止を通知（エラーを無視）
+        try {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          if (tabs[0]?.id) {
+            await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STOPPED' });
+          }
+        } catch (error) {
+          console.error('Background: Failed to notify content script of session stop:', error);
         }
 
         sendResponse({ success: true, sessionData, isActive: false });
@@ -226,25 +234,14 @@ class BackgroundService {
         console.log('Background: Starting session...');
         const sessionId = await this.sessionManager.startSession();
 
-        // すべてのタブにContent Scriptを再注入してセッション開始を通知
-        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-        for (const tab of tabs) {
-          if (tab.id) {
-            try {
-              // Content Scriptを再注入
-              await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                files: ['content.js'],
-              });
-
-              // セッション開始を通知
-              await this.sendMessageToContentScript(tab.id, { type: 'SESSION_STARTED', sessionId });
-            } catch (error) {
-              console.error(
-                `Background: Failed to inject content script into tab ${tab.id}:`,
-                error
-              );
-            }
+        // Content Scriptの再注入は無効化（クラッシュの原因）
+        // アクティブなタブのみにセッション開始を通知
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs[0]?.id) {
+          try {
+            await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STARTED', sessionId });
+          } catch (error) {
+            console.error('Background: Failed to notify content script:', error);
           }
         }
 

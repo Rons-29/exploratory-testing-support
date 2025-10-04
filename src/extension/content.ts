@@ -1,17 +1,21 @@
 import { EventTracker } from './services/EventTracker';
 import { FloatingButton } from './ui/FloatingButton';
 import { LogCollector } from './services/LogCollector';
+import { LightweightLogCollector } from './services/LightweightLogCollector';
 
 class ContentScript {
   private eventTracker: EventTracker;
   private floatingButton: FloatingButton;
   private logCollector: LogCollector;
+  private lightweightLogCollector: LightweightLogCollector;
   private isSessionActive: boolean = false;
+  private useLightweightMode: boolean = true; // 軽量モードをデフォルトに
 
   constructor() {
     this.eventTracker = new EventTracker();
     this.floatingButton = new FloatingButton();
     this.logCollector = new LogCollector();
+    this.lightweightLogCollector = new LightweightLogCollector();
   }
 
   public async initialize(): Promise<void> {
@@ -315,13 +319,23 @@ class ContentScript {
       case 'SESSION_STARTED':
         this.isSessionActive = true;
         this.floatingButton.updateStatus('active');
-        this.logCollector.startCollecting(0); // tabIdは不要
+        // 軽量版LogCollectorを使用
+        if (this.useLightweightMode) {
+          this.lightweightLogCollector.startCollecting(0);
+        } else {
+          this.logCollector.startCollecting(0);
+        }
         console.log('Content Script: Session started');
         return true;
       case 'SESSION_STOPPED':
         this.isSessionActive = false;
         this.floatingButton.updateStatus('inactive');
-        this.logCollector.stopCollecting();
+        // 軽量版LogCollectorを使用
+        if (this.useLightweightMode) {
+          this.lightweightLogCollector.stopCollecting();
+        } else {
+          this.logCollector.stopCollecting();
+        }
         console.log('Content Script: Session stopped');
         return true;
       case 'START_LOG_COLLECTION':

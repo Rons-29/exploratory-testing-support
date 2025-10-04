@@ -5,9 +5,21 @@ export class SessionManager {
   private sessionStorageKey = 'current_session';
 
   constructor() {
-    // 非同期でセッションを読み込み
-    this.loadSessionFromStorage().catch(error => {
-      console.error('Failed to initialize session manager:', error);
+    // 初期状態を確実に「停止中」に設定
+    this.currentSession = null;
+    
+    // 古いセッションデータをクリアしてから初期化
+    this.clearOldSessions().then(() => {
+      // 非同期でセッションを読み込み
+      this.loadSessionFromStorage().catch(error => {
+        console.error('Failed to initialize session manager:', error);
+        // エラー時も確実に「停止中」状態を維持
+        this.currentSession = null;
+      });
+    }).catch(error => {
+      console.error('Failed to clear old sessions:', error);
+      // エラー時も確実に「停止中」状態を維持
+      this.currentSession = null;
     });
   }
 
@@ -260,6 +272,26 @@ export class SessionManager {
     return `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  private async clearOldSessions(): Promise<void> {
+    try {
+      console.log('SessionManager: Clearing old sessions...');
+      const result = await chrome.storage.local.get(this.sessionStorageKey);
+      if (result[this.sessionStorageKey]) {
+        const sessionData = result[this.sessionStorageKey];
+        console.log('SessionManager: Found old session data:', sessionData);
+        
+        // 古いセッションがACTIVE状態の場合は停止状態に変更
+        if (sessionData.status === SessionStatus.ACTIVE) {
+          console.log('SessionManager: Clearing active session from storage');
+          await chrome.storage.local.remove(this.sessionStorageKey);
+        }
+      }
+      console.log('SessionManager: Old sessions cleared');
+    } catch (error) {
+      console.error('SessionManager: Error clearing old sessions:', error);
+    }
+  }
+
   private generateScreenshotId(): string {
     return `screenshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -294,5 +326,20 @@ export class SessionManager {
       type: 'SESSION_RESUMED',
       sessionId: this.currentSession?.id
     });
+  }
+
+  public async addLog(logData: any): Promise<void> {
+    if (!this.currentSession) return;
+
+    // ログをセッションに追加
+    this.currentSession.events.push({
+      id: logData.id,
+      type: 'log' as any,
+      timestamp: logData.timestamp,
+      data: logData
+    });
+
+    await this.saveSessionToStorage();
+    console.log('SessionManager: Log added:', logData.id);
   }
 }

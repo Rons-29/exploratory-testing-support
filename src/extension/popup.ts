@@ -69,6 +69,14 @@ class PopupController {
   private async loadSessionStatus(): Promise<void> {
     try {
       console.log('Loading session status...');
+      
+      // 初期状態を強制的に「停止中」に設定
+      this.isSessionActive = false;
+      this.sessionId = null;
+      this.sessionStartTime = null;
+      this.updateUI();
+      
+      // バックグラウンドスクリプトから実際の状態を取得
       const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
       console.log('Session status response:', response);
       if (response && response.success) {
@@ -81,6 +89,11 @@ class PopupController {
       }
     } catch (error) {
       console.error('Failed to load session status:', error);
+      // エラー時も「停止中」状態を維持
+      this.isSessionActive = false;
+      this.sessionId = null;
+      this.sessionStartTime = null;
+      this.updateUI();
     }
   }
 

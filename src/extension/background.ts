@@ -53,25 +53,14 @@ class BackgroundService {
     tab: chrome.tabs.Tab
   ): void {
     if (changeInfo.status === 'complete' && tab.url) {
-      // ページ読み込み完了時の処理
-      // コンテンツスクリプトが注入されているか確認してからメッセージを送信
-      this.sendMessageToContentScript(tabId, { type: 'START_LOG_COLLECTION' });
+      // ページ読み込み完了時の処理は無効化（エラーの原因）
+      // Content Scriptは自動的に初期化されるため、メッセージ送信は不要
+      console.log('Tab updated:', tabId, tab.url);
     }
   }
 
-  private async sendMessageToContentScript(tabId: number, message: any): Promise<void> {
-    try {
-      // 直接メッセージを送信（PINGは不要）
-      await chrome.tabs.sendMessage(tabId, message);
-    } catch (error) {
-      // コンテンツスクリプトが存在しない場合は無視（正常な動作）
-      if (error instanceof Error && error.message?.includes('Could not establish connection')) {
-        console.log('Content script not available for tab:', tabId, '(normal behavior)');
-      } else {
-        console.log('Content script error for tab:', tabId, error);
-      }
-    }
-  }
+  // sendMessageToContentScriptメソッドは削除（エラーの原因）
+  // Content Scriptはストレージ変更を監視して自動的に状態を更新
 
   public handleMessage(
     message: any,
@@ -219,31 +208,18 @@ class BackgroundService {
           // API送信に失敗してもセッション停止は続行
         }
 
-        // コンテンツスクリプトにセッション停止を通知（エラーを無視）
-        try {
-          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          if (tabs[0]?.id) {
-            await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STOPPED' });
-          }
-        } catch (error) {
-          console.error('Background: Failed to notify content script of session stop:', error);
-        }
+        // Content Scriptへの通知は無効化（エラーの原因）
+        // Content Scriptはストレージ変更を監視して自動的に状態を更新
+        console.log('Session stopped');
 
         sendResponse({ success: true, sessionData, isActive: false });
       } else {
         console.log('Background: Starting session...');
         const sessionId = await this.sessionManager.startSession();
 
-        // Content Scriptの再注入は無効化（クラッシュの原因）
-        // アクティブなタブのみにセッション開始を通知
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.id) {
-          try {
-            await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STARTED', sessionId });
-          } catch (error) {
-            console.error('Background: Failed to notify content script:', error);
-          }
-        }
+        // Content Scriptへの通知は無効化（エラーの原因）
+        // Content Scriptはストレージ変更を監視して自動的に状態を更新
+        console.log('Session started:', sessionId);
 
         sendResponse({ success: true, sessionId, isActive: true });
       }
@@ -293,16 +269,8 @@ class BackgroundService {
     sendResponse: (response?: any) => void
   ): Promise<void> {
     try {
-      // コンテンツスクリプトにフラグイベントを送信
-      const tabId =
-        message.tabId || (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
-      if (tabId) {
-        await this.sendMessageToContentScript(tabId, {
-          type: 'FLAG_EVENT',
-          eventId: message.eventId,
-          note: message.note,
-        });
-      }
+      // フラグイベントの処理は簡素化（Content Scriptへの通知は無効化）
+      console.log('Flag event:', message.eventId, message.note);
       sendResponse({ success: true });
     } catch (error) {
       sendResponse({

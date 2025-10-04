@@ -11,7 +11,16 @@ export class FloatingButton {
   }
 
   public create(): void {
+    // 既存のボタンをチェック（重複防止）
     if (this.button) return;
+    
+    // DOM上に既存のボタンがないかチェック
+    const existingButton = document.getElementById('ai-test-partner-floating-button');
+    if (existingButton) {
+      this.button = existingButton as HTMLElement;
+      this.isVisible = true;
+      return;
+    }
 
     this.button = document.createElement('div');
     this.button.id = 'ai-test-partner-floating-button';
@@ -30,6 +39,12 @@ export class FloatingButton {
       this.button.remove();
       this.button = null;
       this.isVisible = false;
+    }
+    
+    // DOM上に残っているボタンも削除（重複防止）
+    const existingButton = document.getElementById('ai-test-partner-floating-button');
+    if (existingButton) {
+      existingButton.remove();
     }
   }
 

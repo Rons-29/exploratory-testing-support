@@ -16,8 +16,10 @@ class PopupController {
 
   public initialize(): void {
     this.setupEventListeners();
-    this.loadSessionStatus();
-    this.startStatsUpdate();
+    // 状態を先に読み込んでからUIを更新
+    this.loadSessionStatus().then(() => {
+      this.startStatsUpdate();
+    });
 
     // test_logs 変更で統計を自動更新
     chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -70,12 +72,6 @@ class PopupController {
     try {
       console.log('Loading session status...');
       
-      // 初期状態を強制的に「停止中」に設定
-      this.isSessionActive = false;
-      this.sessionId = null;
-      this.sessionStartTime = null;
-      this.updateUI();
-      
       // バックグラウンドスクリプトから実際の状態を取得
       const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
       console.log('Session status response:', response);
@@ -83,17 +79,30 @@ class PopupController {
         this.isSessionActive = response.isActive;
         this.sessionId = response.sessionData?.id || null;
         this.sessionStartTime = response.sessionData?.startTime || null;
+        
+        // セッションがアクティブな場合はタイマーを開始
+        if (this.isSessionActive && this.sessionStartTime) {
+          this.startTimer();
+        }
+        
         this.updateUI();
+        console.log('Session status loaded successfully:', {
+          isActive: this.isSessionActive,
+          sessionId: this.sessionId,
+          startTime: this.sessionStartTime
+        });
       } else {
         console.log('No active session or invalid response');
+        // セッションが存在しない場合のみ「停止中」に設定
+        this.isSessionActive = false;
+        this.sessionId = null;
+        this.sessionStartTime = null;
+        this.updateUI();
       }
     } catch (error) {
       console.error('Failed to load session status:', error);
-      // エラー時も「停止中」状態を維持
-      this.isSessionActive = false;
-      this.sessionId = null;
-      this.sessionStartTime = null;
-      this.updateUI();
+      // エラー時は既存の状態を保持（リセットしない）
+      console.log('Keeping existing state due to error');
     }
   }
 
@@ -124,6 +133,10 @@ class PopupController {
         }
         this.updateUI();
         this.updateStats(); // 統計情報も更新
+        
+        // Content Scriptへの通知は無効化（エラーの原因）
+        // Content Scriptはストレージ変更を監視して自動的に状態を更新
+        console.log('Session toggled, Content Script will update via storage change');
       } else {
         console.log('Failed to toggle session:', response);
         this.showNotification('セッションの切り替えに失敗しました', 'error');

@@ -1,6 +1,8 @@
 export enum EventType {
   CLICK = 'click',
   KEYDOWN = 'keydown',
+  INPUT = 'input',
+  NAVIGATION = 'navigation',
   MOUSE_MOVE = 'mouse_move',
   FOCUS = 'focus',
   PAGE_LOAD = 'page_load',

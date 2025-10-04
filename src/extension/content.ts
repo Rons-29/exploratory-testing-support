@@ -1,18 +1,22 @@
 import { EventTracker } from './services/EventTracker';
+import { OptimizedEventTracker } from './services/OptimizedEventTracker';
 import { FloatingButton } from './ui/FloatingButton';
 import { LogCollector } from './services/LogCollector';
 import { LightweightLogCollector } from './services/LightweightLogCollector';
 
 class ContentScript {
   private eventTracker: EventTracker;
+  private optimizedEventTracker: OptimizedEventTracker;
   private floatingButton: FloatingButton;
   private logCollector: LogCollector;
   private lightweightLogCollector: LightweightLogCollector;
   private isSessionActive: boolean = false;
   private useLightweightMode: boolean = true; // 軽量モードをデフォルトに
+  private useOptimizedEvents: boolean = true; // 最適化されたイベント追跡を使用
 
   constructor() {
     this.eventTracker = new EventTracker();
+    this.optimizedEventTracker = new OptimizedEventTracker();
     this.floatingButton = new FloatingButton();
     this.logCollector = new LogCollector();
     this.lightweightLogCollector = new LightweightLogCollector();
@@ -45,11 +49,17 @@ class ContentScript {
         const isActive = status === 'active' || status === 'ACTIVE';
         this.isSessionActive = Boolean(isActive);
         try {
-          this.floatingButton.updateSessionStatus(this.isSessionActive);
+          if (this.isSessionActive) {
+            // セッションがアクティブな場合のみフローティングボタンを表示
+            this.floatingButton.create();
+            this.floatingButton.updateStatus('active');
+          } else {
+            // セッションが非アクティブな場合はフローティングボタンを非表示
+            this.floatingButton.destroy();
+          }
         } catch (e) {
-          // no-op
+          // エラーは無視（軽量化のため）
         }
-        console.log('Content Script: storage change -> session active =', this.isSessionActive);
       }
     });
   }
@@ -62,7 +72,14 @@ class ContentScript {
       if (response && response.success) {
         this.isSessionActive = response.isActive;
         console.log('Content Script: Session status checked via message:', this.isSessionActive);
-        this.floatingButton.updateSessionStatus(this.isSessionActive);
+        if (this.isSessionActive) {
+          // セッションがアクティブな場合のみフローティングボタンを表示
+          this.floatingButton.create();
+          this.floatingButton.updateStatus('active');
+        } else {
+          // セッションが非アクティブな場合はフローティングボタンを非表示
+          this.floatingButton.destroy();
+        }
         return;
       }
     } catch (error) {
@@ -77,7 +94,14 @@ class ContentScript {
       const status = session?.status;
       const isActive = status === 'active' || status === 'ACTIVE';
       this.isSessionActive = Boolean(isActive);
-      this.floatingButton.updateSessionStatus(this.isSessionActive);
+      if (this.isSessionActive) {
+        // セッションがアクティブな場合のみフローティングボタンを表示
+        this.floatingButton.create();
+        this.floatingButton.updateStatus('active');
+      } else {
+        // セッションが非アクティブな場合はフローティングボタンを非表示
+        this.floatingButton.destroy();
+      }
       console.log(
         'Content Script: Fallback session status =',
         this.isSessionActive,
@@ -90,8 +114,9 @@ class ContentScript {
   }
 
   private setup(): void {
-    // フローティングボタンを追加
-    this.floatingButton.create();
+    // フローティングボタンは状態に応じて表示（無条件作成は削除）
+    // セッション状態を確認してから表示する
+    this.checkSessionStatus();
 
     // イベントトラッキングを開始
     this.startEventTracking();
@@ -313,11 +338,20 @@ class ContentScript {
         return true;
       case 'SESSION_STATUS':
         this.isSessionActive = message.isActive;
-        this.floatingButton.updateSessionStatus(message.isActive);
+        if (this.isSessionActive) {
+          // セッションがアクティブな場合のみフローティングボタンを表示
+          this.floatingButton.create();
+          this.floatingButton.updateStatus('active');
+        } else {
+          // セッションが非アクティブな場合はフローティングボタンを非表示
+          this.floatingButton.destroy();
+        }
         console.log('Content Script: Session status updated:', this.isSessionActive);
         return true;
       case 'SESSION_STARTED':
         this.isSessionActive = true;
+        // セッション開始時はフローティングボタンを表示
+        this.floatingButton.create();
         this.floatingButton.updateStatus('active');
         // 軽量版LogCollectorを使用
         if (this.useLightweightMode) {
@@ -330,6 +364,8 @@ class ContentScript {
       case 'SESSION_STOPPED':
         this.isSessionActive = false;
         this.floatingButton.updateStatus('inactive');
+        // セッション停止時はフローティングボタンを非表示にする
+        this.floatingButton.destroy();
         // 軽量版LogCollectorを使用
         if (this.useLightweightMode) {
           this.lightweightLogCollector.stopCollecting();

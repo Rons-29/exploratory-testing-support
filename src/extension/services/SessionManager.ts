@@ -301,31 +301,27 @@ export class SessionManager {
   }
 
   private notifySessionStarted(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_STARTED',
-      sessionId: this.currentSession?.id
-    });
+    // 通知処理は無効化（Chromeクラッシュの原因）
+    // ストレージ変更でContent Scriptが自動的に状態を更新
+    console.log('Session started:', this.currentSession?.id);
   }
 
   private notifySessionStopped(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_STOPPED',
-      sessionId: this.currentSession?.id
-    });
+    // 通知処理は無効化（Chromeクラッシュの原因）
+    // ストレージ変更でContent Scriptが自動的に状態を更新
+    console.log('Session stopped:', this.currentSession?.id);
   }
 
   private notifySessionPaused(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_PAUSED',
-      sessionId: this.currentSession?.id
-    });
+    // 通知処理は無効化（Chromeクラッシュの原因）
+    // ストレージ変更でContent Scriptが自動的に状態を更新
+    console.log('Session paused:', this.currentSession?.id);
   }
 
   private notifySessionResumed(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_RESUMED',
-      sessionId: this.currentSession?.id
-    });
+    // 通知処理は無効化（Chromeクラッシュの原因）
+    // ストレージ変更でContent Scriptが自動的に状態を更新
+    console.log('Session resumed:', this.currentSession?.id);
   }
 
   public async addLog(logData: any): Promise<void> {

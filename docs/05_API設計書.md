@@ -6,12 +6,14 @@
 ## 1. API概要
 
 ### 1.1 基本情報
+
 - **ベースURL**: `https://api.test-partner.com/v1`
 - **認証方式**: Bearer Token (JWT)
 - **データ形式**: JSON
 - **文字エンコーディング**: UTF-8
 
 ### 1.2 共通仕様
+
 - **HTTPメソッド**: RESTful準拠
 - **ステータスコード**: HTTP標準準拠
 - **エラーレスポンス**: 統一フォーマット
@@ -22,6 +24,7 @@
 ### 2.1 Google OAuth認証
 
 #### 2.1.1 認証開始
+
 ```http
 GET /auth/google
 ```
@@ -29,12 +32,14 @@ GET /auth/google
 **説明**: Google OAuth認証を開始する
 
 **レスポンス**:
+
 ```http
 HTTP/1.1 302 Found
 Location: https://accounts.google.com/oauth/authorize?client_id=...
 ```
 
 #### 2.1.2 認証コールバック
+
 ```http
 GET /auth/google/callback?code={code}&state={state}
 ```
@@ -42,10 +47,12 @@ GET /auth/google/callback?code={code}&state={state}
 **説明**: Google OAuth認証のコールバック処理
 
 **パラメータ**:
+
 - `code` (string, required): 認証コード
 - `state` (string, required): ステートパラメータ
 
 **レスポンス**:
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -63,6 +70,7 @@ GET /auth/google/callback?code={code}&state={state}
 ### 2.2 トークン管理
 
 #### 2.2.1 トークン更新
+
 ```http
 POST /auth/refresh
 ```
@@ -70,6 +78,7 @@ POST /auth/refresh
 **説明**: リフレッシュトークンを使用してアクセストークンを更新
 
 **リクエストボディ**:
+
 ```json
 {
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -77,6 +86,7 @@ POST /auth/refresh
 ```
 
 **レスポンス**:
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -85,6 +95,7 @@ POST /auth/refresh
 ```
 
 #### 2.2.2 ログアウト
+
 ```http
 POST /auth/logout
 ```
@@ -92,11 +103,13 @@ POST /auth/logout
 **説明**: ユーザーをログアウトし、トークンを無効化
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **レスポンス**:
+
 ```json
 {
   "message": "ログアウトしました"
@@ -108,6 +121,7 @@ Authorization: Bearer {access_token}
 ### 3.1 セッション作成
 
 #### 3.1.1 新しいセッションを作成
+
 ```http
 POST /sessions
 ```
@@ -115,12 +129,14 @@ POST /sessions
 **説明**: 新しいテストセッションを作成する
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
 **リクエストボディ**:
+
 ```json
 {
   "target_url": "https://example.com",
@@ -130,6 +146,7 @@ Content-Type: application/json
 ```
 
 **レスポンス**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -147,6 +164,7 @@ Content-Type: application/json
 ### 3.2 セッション更新
 
 #### 3.2.1 セッション状態を更新
+
 ```http
 PATCH /sessions/{session_id}
 ```
@@ -154,15 +172,18 @@ PATCH /sessions/{session_id}
 **説明**: セッションの状態を更新する（一時停止、再開、終了）
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
 **リクエストボディ**:
+
 ```json
 {
   "status": "completed",
@@ -171,6 +192,7 @@ Content-Type: application/json
 ```
 
 **レスポンス**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -183,6 +205,7 @@ Content-Type: application/json
 ### 3.3 セッション取得
 
 #### 3.3.1 セッション詳細を取得
+
 ```http
 GET /sessions/{session_id}
 ```
@@ -190,14 +213,17 @@ GET /sessions/{session_id}
 **説明**: 特定のセッションの詳細情報を取得する
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **レスポンス**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -217,6 +243,7 @@ Authorization: Bearer {access_token}
 ```
 
 #### 3.3.2 セッション一覧を取得
+
 ```http
 GET /sessions
 ```
@@ -224,17 +251,20 @@ GET /sessions
 **説明**: ユーザーのセッション一覧を取得する
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **クエリパラメータ**:
+
 - `page` (integer, optional): ページ番号（デフォルト: 1）
 - `limit` (integer, optional): 1ページあたりの件数（デフォルト: 20、最大: 100）
 - `status` (string, optional): ステータスでフィルタ（active, paused, completed）
 - `sort` (string, optional): ソート順（created_at, updated_at, start_time）
 
 **レスポンス**:
+
 ```json
 {
   "sessions": [
@@ -267,6 +297,7 @@ Authorization: Bearer {access_token}
 ### 4.1 イベント送信
 
 #### 4.1.1 イベントをバッチ送信
+
 ```http
 POST /sessions/{session_id}/events
 ```
@@ -274,15 +305,18 @@ POST /sessions/{session_id}/events
 **説明**: 複数のイベントを一度に送信する（バッチ処理）
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
 **リクエストボディ**:
+
 ```json
 {
   "events": [
@@ -342,6 +376,7 @@ Content-Type: application/json
 ```
 
 **レスポンス**:
+
 ```json
 {
   "processed_count": 5,
@@ -359,6 +394,7 @@ Content-Type: application/json
 ### 4.2 イベント取得
 
 #### 4.2.1 セッションのイベント一覧を取得
+
 ```http
 GET /sessions/{session_id}/events
 ```
@@ -366,14 +402,17 @@ GET /sessions/{session_id}/events
 **説明**: セッションのイベント一覧を取得する（ページネーション対応）
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **クエリパラメータ**:
+
 - `page` (integer, optional): ページ番号（デフォルト: 1）
 - `limit` (integer, optional): 1ページあたりの件数（デフォルト: 100、最大: 1000）
 - `type` (string, optional): イベントタイプでフィルタ
@@ -381,6 +420,7 @@ Authorization: Bearer {access_token}
 - `end_time` (string, optional): 終了時刻（ISO 8601形式）
 
 **レスポンス**:
+
 ```json
 {
   "events": [
@@ -414,6 +454,7 @@ Authorization: Bearer {access_token}
 ### 5.1 スクリーンショットアップロード
 
 #### 5.1.1 スクリーンショットをアップロード
+
 ```http
 POST /sessions/{session_id}/screenshots
 ```
@@ -421,15 +462,18 @@ POST /sessions/{session_id}/screenshots
 **説明**: スクリーンショットをアップロードする
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: multipart/form-data
 ```
 
 **リクエストボディ**:
+
 ```
 file: [バイナリデータ]
 event_id: "550e8400-e29b-41d4-a716-446655440010" (optional)
@@ -437,6 +481,7 @@ description: "ログイン画面のスクリーンショット" (optional)
 ```
 
 **レスポンス**:
+
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440020",
@@ -454,6 +499,7 @@ description: "ログイン画面のスクリーンショット" (optional)
 ### 5.2 スクリーンショット取得
 
 #### 5.2.1 セッションのスクリーンショット一覧を取得
+
 ```http
 GET /sessions/{session_id}/screenshots
 ```
@@ -461,14 +507,17 @@ GET /sessions/{session_id}/screenshots
 **説明**: セッションのスクリーンショット一覧を取得する
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **レスポンス**:
+
 ```json
 {
   "screenshots": [
@@ -490,6 +539,7 @@ Authorization: Bearer {access_token}
 ### 6.1 レポート生成
 
 #### 6.1.1 セッションのレポートを生成
+
 ```http
 POST /sessions/{session_id}/reports
 ```
@@ -497,15 +547,18 @@ POST /sessions/{session_id}/reports
 **説明**: セッションのレポートを生成する
 
 **パラメータ**:
+
 - `session_id` (string, required): セッションID
 
 **ヘッダー**:
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
 ```
 
 **リクエストボディ**:
+
 ```json
 {
   "format": "markdown",
@@ -517,6 +570,7 @@ Content-Type: application/json
 ```
 
 **レスポンス**:
+
 ```json
 {
   "report_id": "550e8400-e29b-41d4-a716-446655440030",
@@ -530,6 +584,7 @@ Content-Type: application/json
 ## 7. エラーレスポンス
 
 ### 7.1 エラーレスポンス形式
+
 ```json
 {
   "error": {
@@ -548,24 +603,26 @@ Content-Type: application/json
 
 ### 7.2 エラーコード一覧
 
-| コード | HTTPステータス | 説明 |
-|--------|----------------|------|
-| `VALIDATION_ERROR` | 400 | リクエストの形式が正しくありません |
-| `UNAUTHORIZED` | 401 | 認証が必要です |
-| `FORBIDDEN` | 403 | アクセス権限がありません |
-| `NOT_FOUND` | 404 | リソースが見つかりません |
-| `RATE_LIMIT_EXCEEDED` | 429 | レート制限を超えました |
-| `INTERNAL_ERROR` | 500 | 内部サーバーエラーが発生しました |
+| コード                | HTTPステータス | 説明                               |
+| --------------------- | -------------- | ---------------------------------- |
+| `VALIDATION_ERROR`    | 400            | リクエストの形式が正しくありません |
+| `UNAUTHORIZED`        | 401            | 認証が必要です                     |
+| `FORBIDDEN`           | 403            | アクセス権限がありません           |
+| `NOT_FOUND`           | 404            | リソースが見つかりません           |
+| `RATE_LIMIT_EXCEEDED` | 429            | レート制限を超えました             |
+| `INTERNAL_ERROR`      | 500            | 内部サーバーエラーが発生しました   |
 
 ## 8. レート制限
 
 ### 8.1 制限値
+
 - **認証API**: 100リクエスト/時間
 - **セッションAPI**: 1000リクエスト/時間
 - **イベントAPI**: 10000リクエスト/時間
 - **スクリーンショットAPI**: 100リクエスト/時間
 
 ### 8.2 レート制限ヘッダー
+
 ```http
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
@@ -575,6 +632,7 @@ X-RateLimit-Reset: 1609459200
 ## 9. Webhook（将来実装）
 
 ### 9.1 Webhook設定
+
 ```http
 POST /webhooks
 ```
@@ -582,6 +640,7 @@ POST /webhooks
 **説明**: Webhookエンドポイントを設定する
 
 **リクエストボディ**:
+
 ```json
 {
   "url": "https://example.com/webhook",
@@ -591,6 +650,7 @@ POST /webhooks
 ```
 
 ### 9.2 Webhookペイロード例
+
 ```json
 {
   "event": "session.completed",

@@ -12,10 +12,10 @@ if (typeof window !== 'undefined') {
         hostname: 'example.com',
         pathname: '/',
         search: '',
-        hash: ''
+        hash: '',
       },
       writable: true,
-      configurable: true
+      configurable: true,
     });
   }
 
@@ -23,10 +23,10 @@ if (typeof window !== 'undefined') {
   if (!window.performance) {
     Object.defineProperty(window, 'performance', {
       value: {
-        now: jest.fn(() => Date.now())
+        now: jest.fn(() => Date.now()),
       },
       writable: true,
-      configurable: true
+      configurable: true,
     });
   }
 }
@@ -40,7 +40,7 @@ if (process.env.NODE_ENV === 'test') {
     error: jest.fn(),
     warn: jest.fn(),
     info: jest.fn(),
-    debug: jest.fn()
+    debug: jest.fn(),
   };
 }
 
@@ -64,22 +64,22 @@ if (typeof global.setImmediate === 'undefined') {
         _onImmediate: callback,
         hasRef: () => true,
         ref: () => timeoutId,
-        unref: () => timeoutId
+        unref: () => timeoutId,
       }) as NodeJS.Immediate;
     },
     {
       __promisify__: <T = void>(value?: T, options?: unknown): Promise<T> => {
         return Promise.resolve(value as T);
-      }
+      },
     }
   );
-  
+
   const mockClearImmediate = (immediate: NodeJS.Immediate | undefined): void => {
     if (immediate !== undefined) {
       clearTimeout(immediate as any);
     }
   };
-  
+
   global.setImmediate = mockSetImmediate;
   global.clearImmediate = mockClearImmediate;
 }

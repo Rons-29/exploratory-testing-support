@@ -3,27 +3,15 @@
   "name": "探索的テスト支援",
   "version": "1.0.0",
   "description": "探索的テスト支援サービス - 操作ログの自動記録とレポート生成",
-  "permissions": [
-    "activeTab",
-    "storage",
-    "scripting",
-    "tabs",
-    "debugger"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "permissions": ["activeTab", "storage", "scripting", "tabs", "debugger"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content.js"
-      ],
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
       "run_at": "document_end"
     }
   ],
@@ -45,14 +33,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "floating-button.html",
-        "logs.html",
-        "report.html"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
+      "resources": ["floating-button.html", "logs.html", "report.html"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

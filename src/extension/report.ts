@@ -68,23 +68,23 @@ class ReportViewer {
       // バックグラウンドスクリプトからレポートを取得
       const response = await chrome.runtime.sendMessage({ type: 'EXPORT_REPORT' });
       console.log('Report: Received response from background script:', response);
-      
+
       if (response && response.success) {
         const logs = response.logs || [];
         console.log('Raw logs from background:', logs);
         console.log('Logs length:', logs.length);
         const stats = this.calculateStats(logs);
         console.log('Calculated stats:', stats);
-        
+
         this.reportData = {
           sessionId: 'N/A',
           startTime: 'N/A',
           endTime: 'N/A',
           duration: 0,
           stats: stats,
-          report: response.report || 'レポートが生成されませんでした'
+          report: response.report || 'レポートが生成されませんでした',
         };
-        
+
         console.log('Report data loaded:', this.reportData);
         this.displayReport();
         this.updateStats();
@@ -94,7 +94,10 @@ class ReportViewer {
       }
     } catch (error) {
       console.error('Failed to load report:', error);
-      this.showError('レポートの読み込みに失敗しました: ' + (error instanceof Error ? error.message : String(error)));
+      this.showError(
+        'レポートの読み込みに失敗しました: ' +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
   }
 
@@ -132,7 +135,7 @@ class ReportViewer {
 
     const stats = this.reportData.stats;
     console.log('Updating stats with data:', stats);
-    
+
     this.updateStatElement('totalEvents', stats.total);
     this.updateStatElement('clickEvents', stats.click);
     this.updateStatElement('keyEvents', stats.key);
@@ -165,9 +168,11 @@ class ReportViewer {
       console: logs.filter(log => log.type === 'console').length,
       network: logs.filter(log => log.type === 'network').length,
       networkError: logs.filter(log => log.type === 'network_error').length,
-      error: logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
+      error: logs.filter(
+        log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
+      ).length,
       screenshot: logs.filter(log => log.type === 'screenshot').length,
-      flag: logs.filter(log => log.type === 'flag').length
+      flag: logs.filter(log => log.type === 'flag').length,
     };
   }
 

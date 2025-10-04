@@ -40,17 +40,17 @@ class FloatingButton {
     });
 
     // 最小化ボタン
-    this.minimizeButton.addEventListener('click', (e) => {
+    this.minimizeButton.addEventListener('click', e => {
       e.stopPropagation();
       this.toggleMinimize();
     });
 
     // ドラッグ機能
-    this.mainButton.addEventListener('mousedown', (e) => {
+    this.mainButton.addEventListener('mousedown', e => {
       this.startDrag(e);
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('mousemove', e => {
       this.drag(e);
     });
 
@@ -64,7 +64,7 @@ class FloatingButton {
     });
 
     // キーボードショートカット
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', e => {
       this.handleKeyboardShortcut(e);
     });
   }
@@ -72,10 +72,10 @@ class FloatingButton {
   private toggleSession(): void {
     this.isSessionActive = !this.isSessionActive;
     this.updateUI();
-    
+
     // Background Scriptにメッセージ送信
     chrome.runtime.sendMessage({
-      type: this.isSessionActive ? 'START_SESSION' : 'STOP_SESSION'
+      type: this.isSessionActive ? 'START_SESSION' : 'STOP_SESSION',
     });
   }
 
@@ -92,14 +92,14 @@ class FloatingButton {
     if (note) {
       chrome.runtime.sendMessage({
         type: 'ADD_NOTE',
-        note: note
+        note: note,
       });
     }
   }
 
   private toggleMinimize(): void {
     this.isMinimized = !this.isMinimized;
-    
+
     if (this.isMinimized) {
       this.container.style.display = 'none';
       this.createMinimizedButton();
@@ -114,7 +114,7 @@ class FloatingButton {
     minimized.className = 'minimized';
     minimized.id = 'minimizedButton';
     minimized.innerHTML = '<div class="icon">テスト</div>';
-    
+
     minimized.addEventListener('click', () => {
       this.toggleMinimize();
     });
@@ -133,7 +133,7 @@ class FloatingButton {
     this.isDragging = true;
     this.dragStartX = e.clientX - this.container.offsetLeft;
     this.dragStartY = e.clientY - this.container.offsetTop;
-    
+
     this.container.classList.add('dragging');
     e.preventDefault();
   }
@@ -170,21 +170,21 @@ class FloatingButton {
     const position = {
       x: rect.left,
       y: rect.top,
-      isMinimized: this.isMinimized
+      isMinimized: this.isMinimized,
     };
-    
+
     chrome.storage.local.set({ floatingButtonPosition: position });
   }
 
   private loadPosition(): void {
-    chrome.storage.local.get('floatingButtonPosition', (result) => {
+    chrome.storage.local.get('floatingButtonPosition', result => {
       if (result.floatingButtonPosition) {
         const pos = result.floatingButtonPosition;
         this.container.style.left = pos.x + 'px';
         this.container.style.top = pos.y + 'px';
         this.container.style.right = 'auto';
         this.container.style.bottom = 'auto';
-        
+
         if (pos.isMinimized) {
           this.toggleMinimize();
         }
@@ -198,13 +198,13 @@ class FloatingButton {
       e.preventDefault();
       this.toggleSession();
     }
-    
+
     // Ctrl+Shift+F: フラグ
     if (e.ctrlKey && e.shiftKey && e.key === 'F') {
       e.preventDefault();
       this.flagEvent();
     }
-    
+
     // Ctrl+Shift+S: スクリーンショット
     if (e.ctrlKey && e.shiftKey && e.key === 'S') {
       e.preventDefault();

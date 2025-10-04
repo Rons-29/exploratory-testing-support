@@ -31,14 +31,14 @@ class LogViewer {
   private initializeEventListeners(): void {
     // フィルター変更
     const typeFilter = document.getElementById('typeFilter') as HTMLSelectElement;
-    typeFilter.addEventListener('change', (e) => {
+    typeFilter.addEventListener('change', e => {
       this.currentFilter = (e.target as HTMLSelectElement).value;
       this.applyFilters();
     });
 
     // 検索入力
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
-    searchInput.addEventListener('input', (e) => {
+    searchInput.addEventListener('input', e => {
       this.currentSearch = (e.target as HTMLInputElement).value.toLowerCase();
       this.applyFilters();
     });
@@ -60,7 +60,7 @@ class LogViewer {
     try {
       // Background Scriptからログを取得
       const response = await chrome.runtime.sendMessage({ type: 'GET_LOGS' });
-      
+
       if (response && response.success) {
         this.logs = response.logs || [];
         this.applyFilters();
@@ -154,28 +154,28 @@ class LogViewer {
 
   private getTypeClass(type: string): string {
     const typeMap: { [key: string]: string } = {
-      'click': 'click',
-      'keydown': 'keydown',
-      'error': 'error',
-      'console': 'console',
-      'network': 'network',
-      'network_error': 'network_error',
-      'screenshot': 'screenshot',
-      'flag': 'flag'
+      click: 'click',
+      keydown: 'keydown',
+      error: 'error',
+      console: 'console',
+      network: 'network',
+      network_error: 'network_error',
+      screenshot: 'screenshot',
+      flag: 'flag',
     };
     return typeMap[type] || 'console';
   }
 
   private getTypeLabel(type: string): string {
     const labelMap: { [key: string]: string } = {
-      'click': 'クリック',
-      'keydown': 'キー',
-      'error': 'エラー',
-      'console': 'コンソール',
-      'network': 'ネットワーク',
-      'network_error': 'ネットワークエラー',
-      'screenshot': 'スクリーンショット',
-      'flag': 'フラグ'
+      click: 'クリック',
+      keydown: 'キー',
+      error: 'エラー',
+      console: 'コンソール',
+      network: 'ネットワーク',
+      network_error: 'ネットワークエラー',
+      screenshot: 'スクリーンショット',
+      flag: 'フラグ',
     };
     return labelMap[type] || type;
   }
@@ -188,9 +188,11 @@ class LogViewer {
       console: this.logs.filter(log => log.type === 'console').length,
       network: this.logs.filter(log => log.type === 'network').length,
       networkError: this.logs.filter(log => log.type === 'network_error').length,
-      error: this.logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
+      error: this.logs.filter(
+        log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
+      ).length,
       screenshot: this.logs.filter(log => log.type === 'screenshot').length,
-      flag: this.logs.filter(log => log.type === 'flag').length
+      flag: this.logs.filter(log => log.type === 'flag').length,
     };
 
     this.updateStatElement('totalEvents', stats.total);

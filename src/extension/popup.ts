@@ -61,7 +61,7 @@ class PopupController {
     mcpSnapshotButton?.addEventListener('click', () => this.mcpSnapshot());
 
     // キーボードショートカット
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', e => {
       this.handleKeyboardShortcut(e);
     });
   }
@@ -99,7 +99,7 @@ class PopupController {
       if (response && response.success) {
         // Background Scriptから返された状態を使用
         this.isSessionActive = response.isActive;
-        
+
         if (this.isSessionActive) {
           this.sessionId = response.sessionId;
           this.sessionStartTime = new Date();
@@ -173,13 +173,13 @@ class PopupController {
       e.preventDefault();
       this.toggleSession();
     }
-    
+
     // Ctrl+Shift+F: フラグ
     if (e.ctrlKey && e.shiftKey && e.key === 'F') {
       e.preventDefault();
       this.flagEvent();
     }
-    
+
     // Ctrl+Shift+S: スクリーンショット
     if (e.ctrlKey && e.shiftKey && e.key === 'S') {
       e.preventDefault();
@@ -225,29 +225,29 @@ class PopupController {
       statusDot?.classList.remove('inactive');
       statusDot?.classList.add('active');
       if (statusText) statusText.textContent = '記録中';
-      
+
       const btnIcon = toggleButton?.querySelector('.btn-icon');
       const btnText = toggleButton?.querySelector('.btn-text');
       if (btnIcon) btnIcon.textContent = '⏹';
       if (btnText) btnText.textContent = 'テスト停止';
-      
+
       if (sessionInfo) sessionInfo.style.display = 'block';
       if (sessionId) sessionId.textContent = this.sessionId || '-';
-      
+
       quickActions.forEach(btn => btn.removeAttribute('disabled'));
     } else {
       // 非アクティブ状態
       statusDot?.classList.remove('active');
       statusDot?.classList.add('inactive');
       if (statusText) statusText.textContent = '停止中';
-      
+
       const btnIcon = toggleButton?.querySelector('.btn-icon');
       const btnText = toggleButton?.querySelector('.btn-text');
       if (btnIcon) btnIcon.textContent = '▶';
       if (btnText) btnText.textContent = 'テスト開始';
-      
+
       if (sessionInfo) sessionInfo.style.display = 'none';
-      
+
       quickActions.forEach(btn => btn.setAttribute('disabled', 'true'));
     }
   }
@@ -272,7 +272,7 @@ class PopupController {
       const hours = Math.floor(duration / 3600000);
       const minutes = Math.floor((duration % 3600000) / 60000);
       const seconds = Math.floor((duration % 60000) / 1000);
-      
+
       const durationElement = document.getElementById('sessionDuration');
       if (durationElement) {
         durationElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -296,9 +296,11 @@ class PopupController {
         document.getElementById('keydownCount')!.textContent = response.stats.keydownCount || '0';
         document.getElementById('consoleCount')!.textContent = response.stats.consoleCount || '0';
         document.getElementById('networkCount')!.textContent = response.stats.networkCount || '0';
-        document.getElementById('networkErrorCount')!.textContent = response.stats.networkErrorCount || '0';
+        document.getElementById('networkErrorCount')!.textContent =
+          response.stats.networkErrorCount || '0';
         document.getElementById('errorCount')!.textContent = response.stats.errorCount || '0';
-        document.getElementById('screenshotCount')!.textContent = response.stats.screenshotCount || '0';
+        document.getElementById('screenshotCount')!.textContent =
+          response.stats.screenshotCount || '0';
         document.getElementById('flagCount')!.textContent = response.stats.flagCount || '0';
       } else {
         console.log('Popup: Failed to get stats:', response);
@@ -333,24 +335,24 @@ class PopupController {
   private async mcpAnalyze(): Promise<void> {
     try {
       this.showNotification('AI分析を実行中...', 'info');
-      
+
       // 現在のログを取得してコンテキストとして送信
       const logsResponse = await chrome.runtime.sendMessage({ type: 'GET_LOGS' });
       const context = {
         logs: logsResponse.logs || [],
         sessionActive: this.isSessionActive,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
-      const response = await chrome.runtime.sendMessage({ 
-        type: 'MCP_ANALYZE', 
-        context: context 
+      const response = await chrome.runtime.sendMessage({
+        type: 'MCP_ANALYZE',
+        context: context,
       });
-      
+
       if (response && response.success) {
         this.showNotification('AI分析が完了しました', 'success');
         console.log('AI Analysis Result:', response.data);
-        
+
         // 分析結果をログに保存
         await this.saveAnalysisResult(response.data);
       } else {
@@ -366,13 +368,13 @@ class PopupController {
   private async mcpSnapshot(): Promise<void> {
     try {
       this.showNotification('MCPスナップショットを取得中...', 'info');
-      
+
       const response = await chrome.runtime.sendMessage({ type: 'MCP_SNAPSHOT' });
-      
+
       if (response && response.success) {
         this.showNotification('MCPスナップショットを取得しました', 'success');
         console.log('MCP Snapshot:', response.data);
-        
+
         // スナップショットをログに保存
         await this.saveSnapshotResult(response.data);
       } else {
@@ -393,14 +395,14 @@ class PopupController {
         message: 'AI分析結果',
         timestamp: Date.now(),
         details: analysisData,
-        url: window.location.href
+        url: window.location.href,
       };
 
       // ストレージに保存
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(logEntry);
-      
+
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }
@@ -419,14 +421,14 @@ class PopupController {
         message: 'MCPスナップショット',
         timestamp: Date.now(),
         details: snapshotData,
-        url: window.location.href
+        url: window.location.href,
       };
 
       // ストレージに保存
       const result = await chrome.storage.local.get('test_logs');
       const logs = result.test_logs || [];
       logs.push(logEntry);
-      
+
       if (logs.length > 1000) {
         logs.splice(0, logs.length - 1000);
       }

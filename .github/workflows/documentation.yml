@@ -50,11 +50,11 @@ jobs:
         )
         
         for doc in "${required_docs[@]}"; do
-          if [ ! -f "$doc" ]; then
-            echo "❌ Missing required document: $doc"
+          if [ ! -f "docs/$doc" ]; then
+            echo "❌ Missing required document: docs/$doc"
             exit 1
           else
-            echo "✅ Found: $doc"
+            echo "✅ Found: docs/$doc"
           fi
         done
         

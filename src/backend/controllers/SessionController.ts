@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { SessionService } from '../services/SessionService';
 import { Logger } from '../utils/Logger';
 import { authenticateToken } from '../middleware/auth';
+import '../../shared/types/ExpressTypes';
 
 export class SessionController {
   private sessionService: SessionService;
@@ -14,6 +15,9 @@ export class SessionController {
 
   public getRouter(): Router {
     const router = Router();
+
+    // 拡張機能からのセッション保存（認証なし）
+    router.post('/extension', this.createSessionFromExtension.bind(this));
 
     // 認証が必要なルート
     router.use(authenticateToken);
@@ -37,6 +41,23 @@ export class SessionController {
     router.post('/:id/stop', this.stopSession.bind(this));
 
     return router;
+  }
+
+  private async createSessionFromExtension(req: Request, res: Response): Promise<void> {
+    try {
+      const sessionData = req.body;
+      
+      // 拡張機能からのセッションデータをそのまま保存
+      const session = await this.sessionService.createSessionFromExtension(sessionData);
+      
+      res.status(201).json({
+        success: true,
+        session
+      });
+    } catch (error) {
+      this.logger.error('Failed to create session from extension:', error);
+      res.status(500).json({ error: 'Failed to create session from extension' });
+    }
   }
 
   private async createSession(req: Request, res: Response): Promise<void> {

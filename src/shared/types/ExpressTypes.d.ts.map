@@ -1,0 +1,1 @@
+{"version":3,"file":"ExpressTypes.d.ts","sourceRoot":"","sources":["ExpressTypes.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AAGtC,OAAO,CAAC,MAAM,CAAC;IACb,UAAU,OAAO,CAAC;QAChB,UAAU,OAAO;YACf,IAAI,CAAC,EAAE,QAAQ,CAAC;SACjB;KACF;CACF;AAED,OAAO,EAAE,CAAC"}

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>探索的テスト支援 - テストページ</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .test-section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        .log-area {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 探索的テスト支援 - テストページ</h1>
+        
+        <div class="test-section">
+            <h2>📝 フォームテスト</h2>
+            <p>フォーム要素の操作をテストできます：</p>
+            <input type="text" placeholder="テキスト入力" id="textInput">
+            <input type="email" placeholder="メールアドレス" id="emailInput">
+            <textarea placeholder="コメント" id="commentArea" rows="3"></textarea>
+            <button onclick="logAction('フォーム送信')">送信</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🖱️ クリックテスト</h2>
+            <p>ボタンクリックをテストできます：</p>
+            <button onclick="logAction('ボタン1クリック')">ボタン1</button>
+            <button onclick="logAction('ボタン2クリック')">ボタン2</button>
+            <button onclick="logAction('ボタン3クリック')">ボタン3</button>
+        </div>
+
+        <div class="test-section">
+            <h2>⌨️ キーボードテスト</h2>
+            <p>キーボード入力をテストできます：</p>
+            <input type="text" placeholder="キー入力をテスト" id="keyboardTest">
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 コンソールログテスト</h2>
+            <p>コンソールログを生成してテストできます：</p>
+            <button onclick="testConsoleLog()">ログ出力</button>
+            <button onclick="testConsoleError()">エラー出力</button>
+            <button onclick="testConsoleWarn()">警告出力</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🌐 ネットワークテスト</h2>
+            <p>ネットワークリクエストをテストできます：</p>
+            <button onclick="testFetch()">Fetch API テスト</button>
+            <button onclick="testXHR()">XHR テスト</button>
+            <button onclick="testErrorFetch()">エラーFetch テスト</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 ログ表示</h2>
+            <p>テスト中のログがここに表示されます：</p>
+            <div class="log-area" id="logArea">
+                ログがここに表示されます...
+            </div>
+            <button onclick="clearLogs()">ログをクリア</button>
+        </div>
+
+        <div class="test-section">
+            <h2>ℹ️ 使用方法</h2>
+            <p>1. 拡張機能のポップアップを開いて「テスト開始」をクリック</p>
+            <p>2. このページで様々な操作を実行</p>
+            <p>3. 拡張機能の「ログ確認」で記録されたログを確認</p>
+            <p>4. 拡張機能の「スクリーンショット」で画面を撮影</p>
+        </div>
+    </div>
+
+    <script>
+        let logCount = 0;
+
+        function logAction(action) {
+            logCount++;
+            const timestamp = new Date().toLocaleTimeString();
+            const logArea = document.getElementById('logArea');
+            logArea.innerHTML += `[${timestamp}] ${action} (${logCount})\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function testConsoleLog() {
+            console.log('テストログメッセージ', { timestamp: Date.now() });
+            logAction('コンソールログ出力');
+        }
+
+        function testConsoleError() {
+            console.error('テストエラーメッセージ', { error: 'Sample error' });
+            logAction('コンソールエラー出力');
+        }
+
+        function testConsoleWarn() {
+            console.warn('テスト警告メッセージ', { warning: 'Sample warning' });
+            logAction('コンソール警告出力');
+        }
+
+        function testFetch() {
+            fetch('https://httpbin.org/get')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Fetch成功:', data);
+                    logAction('Fetch API テスト成功');
+                })
+                .catch(error => {
+                    console.error('Fetchエラー:', error);
+                    logAction('Fetch API テストエラー');
+                });
+        }
+
+        function testXHR() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://httpbin.org/get');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    console.log('XHR成功:', JSON.parse(xhr.responseText));
+                    logAction('XHR テスト成功');
+                } else {
+                    console.error('XHRエラー:', xhr.status);
+                    logAction('XHR テストエラー');
+                }
+            };
+            xhr.onerror = function() {
+                console.error('XHRネットワークエラー');
+                logAction('XHR ネットワークエラー');
+            };
+            xhr.send();
+        }
+
+        function testErrorFetch() {
+            fetch('https://httpbin.org/status/500')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('エラーFetch成功:', data);
+                    logAction('エラーFetch テスト成功');
+                })
+                .catch(error => {
+                    console.error('エラーFetchエラー:', error);
+                    logAction('エラーFetch テストエラー');
+                });
+        }
+
+        function clearLogs() {
+            document.getElementById('logArea').innerHTML = 'ログがクリアされました...\n';
+            logCount = 0;
+        }
+
+        // キーボードイベントの監視
+        document.getElementById('keyboardTest').addEventListener('keydown', function(e) {
+            logAction(`キー入力: ${e.key} (${e.code})`);
+        });
+
+        // ページ読み込み時のログ
+        window.addEventListener('load', function() {
+            logAction('ページ読み込み完了');
+        });
+    </script>
+</body>
+</html>

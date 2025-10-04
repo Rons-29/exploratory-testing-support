@@ -5,7 +5,10 @@ export class SessionManager {
   private sessionStorageKey = 'current_session';
 
   constructor() {
-    this.loadSessionFromStorage();
+    // 非同期でセッションを読み込み
+    this.loadSessionFromStorage().catch(error => {
+      console.error('Failed to initialize session manager:', error);
+    });
   }
 
   public async startSession(name?: string, description?: string): Promise<string> {
@@ -28,7 +31,7 @@ export class SessionManager {
       flags: [],
       metadata: {
         userAgent: navigator.userAgent,
-        url: window.location.href,
+        url: 'chrome-extension://' + chrome.runtime.id,
         timestamp: now.toISOString()
       }
     };
@@ -77,15 +80,35 @@ export class SessionManager {
   }
 
   public async isActive(): Promise<boolean> {
-    return this.currentSession?.status === SessionStatus.ACTIVE;
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
+    const isActive = this.currentSession?.status === SessionStatus.ACTIVE;
+    console.log('SessionManager: isActive check:', {
+      currentSession: this.currentSession,
+      status: this.currentSession?.status,
+      isActive
+    });
+    return isActive;
+  }
+
+  public async clearSession(): Promise<void> {
+    this.currentSession = null;
+    await chrome.storage.local.remove(this.sessionStorageKey);
+    console.log('SessionManager: Session cleared');
   }
 
   public async getCurrentSession(): Promise<SessionData | null> {
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
     return this.currentSession;
   }
 
   public async addEvent(event: any): Promise<void> {
+    // ストレージから最新の状態を読み込み
+    await this.loadSessionFromStorage();
+    
     if (!this.currentSession || this.currentSession.status !== SessionStatus.ACTIVE) {
+      console.log('SessionManager: addEvent - session not active, skipping event');
       return;
     }
 
@@ -96,6 +119,7 @@ export class SessionManager {
     });
 
     await this.saveSessionToStorage();
+    console.log('SessionManager: addEvent - event added, total events:', this.currentSession.events.length);
   }
 
   public async addScreenshot(screenshotData: string): Promise<string> {
@@ -108,7 +132,7 @@ export class SessionManager {
       id: screenshotId,
       data: screenshotData,
       timestamp: new Date().toISOString(),
-      url: window.location.href
+      url: 'chrome-extension://' + chrome.runtime.id
     });
 
     await this.saveSessionToStorage();
@@ -136,6 +160,7 @@ export class SessionManager {
     eventCount: number;
     errorCount: number;
     screenshotCount: number;
+    flagCount: number;
     duration: number;
   }> {
     if (!this.currentSession) {
@@ -143,6 +168,7 @@ export class SessionManager {
         eventCount: 0,
         errorCount: 0,
         screenshotCount: 0,
+        flagCount: 0,
         duration: 0
       };
     }
@@ -159,6 +185,7 @@ export class SessionManager {
       eventCount: this.currentSession.events.length,
       errorCount,
       screenshotCount: this.currentSession.screenshots.length,
+      flagCount: this.currentSession.flags.length,
       duration
     };
   }

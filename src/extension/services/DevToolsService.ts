@@ -256,7 +256,7 @@ export class DevToolsService {
       timestamp: new Date().toISOString(),
       url: window.location.href,
       metadata: {
-        type: 'network_error',
+        type: 'error',
         errorText: params.errorText,
         requestId: params.requestId
       }
@@ -281,7 +281,7 @@ export class DevToolsService {
         `${frame.functionName} (${frame.url}:${frame.lineNumber}:${frame.columnNumber})`
       ).join('\n'),
       metadata: {
-        type: 'runtime_exception',
+        type: 'error',
         exceptionId: params.exceptionDetails.exceptionId,
         lineNumber: params.exceptionDetails.lineNumber,
         columnNumber: params.exceptionDetails.columnNumber
@@ -304,7 +304,7 @@ export class DevToolsService {
       timestamp: new Date().toISOString(),
       url: window.location.href,
       metadata: {
-        type: 'page_load',
+        type: 'console',
         loadTime: params.timestamp
       }
     };
@@ -325,7 +325,7 @@ export class DevToolsService {
       timestamp: new Date().toISOString(),
       url: window.location.href,
       metadata: {
-        type: 'frame_navigation',
+        type: 'console',
         frameId: params.frame.id,
         url: params.frame.url
       }

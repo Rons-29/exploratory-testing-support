@@ -14,9 +14,14 @@ export class EventTracker {
     this.startFlushTimer();
   }
 
+  private generateId(): string {
+    return `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   public trackClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.CLICK,
       timestamp: new Date().toISOString(),
       data: {
@@ -45,6 +50,7 @@ export class EventTracker {
   public trackKeydown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement;
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.KEYDOWN,
       timestamp: new Date().toISOString(),
       data: {
@@ -74,6 +80,7 @@ export class EventTracker {
     if (Math.random() > 0.1) return;
 
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.MOUSE_MOVE,
       timestamp: new Date().toISOString(),
       data: {
@@ -89,6 +96,7 @@ export class EventTracker {
   public trackFocus(event: FocusEvent): void {
     const target = event.target as HTMLElement;
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.FOCUS,
       timestamp: new Date().toISOString(),
       data: {
@@ -107,6 +115,7 @@ export class EventTracker {
 
   public trackPageUnload(): void {
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.PAGE_UNLOAD,
       timestamp: new Date().toISOString(),
       data: {
@@ -121,6 +130,7 @@ export class EventTracker {
 
   public trackConsoleLog(level: string, args: any[]): void {
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.CONSOLE_LOG,
       timestamp: new Date().toISOString(),
       data: {
@@ -141,6 +151,7 @@ export class EventTracker {
 
   public trackNetworkError(error: any): void {
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.NETWORK_ERROR,
       timestamp: new Date().toISOString(),
       data: {
@@ -159,6 +170,7 @@ export class EventTracker {
 
   public trackPageLoad(): void {
     const eventData: EventData = {
+      id: this.generateId(),
       type: EventType.PAGE_LOAD,
       timestamp: new Date().toISOString(),
       data: {

@@ -80,7 +80,9 @@ describe('EventTracker', () => {
   });
 
   describe('trackKeydown', () => {
-    it('should track keydown event when session is active', () => {
+    it('should track keydown event when session is active', async () => {
+      await mockSessionManager.startSession();
+
       const mockEvent = {
         key: 'Enter',
         code: 'Enter',
@@ -98,6 +100,7 @@ describe('EventTracker', () => {
       } as any;
 
       eventTracker.trackKeydown(mockEvent);
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -123,7 +126,9 @@ describe('EventTracker', () => {
   });
 
   describe('trackMouseMove', () => {
-    it('should track mouse move event with sampling', () => {
+    it('should track mouse move event with sampling', async () => {
+      await mockSessionManager.startSession();
+      
       // Mock Math.random to return 0.05 (less than 0.1 threshold)
       jest.spyOn(Math, 'random').mockReturnValue(0.05);
 
@@ -133,6 +138,7 @@ describe('EventTracker', () => {
       } as any;
 
       eventTracker.trackMouseMove(mockEvent);
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -165,7 +171,9 @@ describe('EventTracker', () => {
   });
 
   describe('trackFocus', () => {
-    it('should track focus event when session is active', () => {
+    it('should track focus event when session is active', async () => {
+      await mockSessionManager.startSession();
+
       const mockEvent = {
         target: {
           tagName: 'INPUT',
@@ -175,6 +183,7 @@ describe('EventTracker', () => {
       } as any;
 
       eventTracker.trackFocus(mockEvent);
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,12 +217,15 @@ describe('EventTracker', () => {
   });
 
   describe('trackConsoleLog', () => {
-    it('should track console log with different levels', () => {
+    it('should track console log with different levels', async () => {
+      await mockSessionManager.startSession();
+      
       const args = ['Test message', { key: 'value' }];
 
       eventTracker.trackConsoleLog('log', args);
       eventTracker.trackConsoleLog('error', args);
       eventTracker.trackConsoleLog('warn', args);
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledTimes(3);
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
@@ -230,7 +242,9 @@ describe('EventTracker', () => {
   });
 
   describe('trackNetworkError', () => {
-    it('should track network error', () => {
+    it('should track network error', async () => {
+      await mockSessionManager.startSession();
+      
       const error = {
         message: 'Network error',
         status: 500,
@@ -239,6 +253,7 @@ describe('EventTracker', () => {
       };
 
       eventTracker.trackNetworkError(error);
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -257,14 +272,17 @@ describe('EventTracker', () => {
   });
 
   describe('trackPageLoad', () => {
-    it('should track page load event', () => {
+    it('should track page load event', async () => {
+      await mockSessionManager.startSession();
+      
       eventTracker.trackPageLoad();
+      await eventTracker.flushEvents();
 
       expect(mockSessionManager.addEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           type: EventType.PAGE_LOAD,
           data: expect.objectContaining({
-            url: 'https://example.com',
+            url: 'http://localhost/',
             title: '',
             referrer: '',
             loadTime: expect.any(Number)

@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ets_db
+    environment:
+      POSTGRES_USER: ets
+      POSTGRES_PASSWORD: ets
+      POSTGRES_DB: ets
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./src/backend/database/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+
+volumes:
+  db_data:
+
+

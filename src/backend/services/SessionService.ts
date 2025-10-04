@@ -1,7 +1,7 @@
 import { DatabaseManager } from '../database/DatabaseManager';
 import { Logger } from '../utils/Logger';
-import { SessionData, SessionStatus } from '@/shared/types/SessionTypes';
-import { PaginatedResponse, PaginationInfo } from '@/shared/types/ApiTypes';
+import { SessionData, SessionStatus } from '../../shared/types/SessionTypes';
+import { PaginatedResponse, PaginationInfo } from '../../shared/types/ApiTypes';
 
 export class SessionService {
   private databaseManager: DatabaseManager;
@@ -27,6 +27,54 @@ export class SessionService {
     } catch (error) {
       this.logger.error('Failed to create session:', error);
       throw new Error('Failed to create session');
+    }
+  }
+
+  public async createSessionFromExtension(sessionData: SessionData): Promise<SessionData> {
+    try {
+      // 拡張機能からのセッションデータをそのまま保存（user_idはNULLで保存）
+      // IDはUUID形式に変換（拡張機能のIDは文字列なので、UUIDを新規生成）
+      const result = await this.databaseManager.query(
+        'INSERT INTO sessions (id, user_id, name, description, status, start_time, end_time, metadata) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [
+          null, // user_idはNULL（拡張機能用）
+          sessionData.name || 'Extension Session',
+          sessionData.description || '',
+          sessionData.status || SessionStatus.COMPLETED,
+          sessionData.startTime,
+          sessionData.endTime,
+          JSON.stringify({
+            ...sessionData.metadata,
+            originalId: sessionData.id // 元のIDをメタデータに保存
+          })
+        ]
+      );
+
+      const savedSession = this.mapSessionFromDb(result.rows[0]);
+
+      // イベント、スクリーンショット、フラグも保存
+      if (sessionData.events && sessionData.events.length > 0) {
+        for (const event of sessionData.events) {
+          await this.addEvent(sessionData.id, event);
+        }
+      }
+
+      if (sessionData.screenshots && sessionData.screenshots.length > 0) {
+        for (const screenshot of sessionData.screenshots) {
+          await this.addScreenshot(sessionData.id, screenshot);
+        }
+      }
+
+      if (sessionData.flags && sessionData.flags.length > 0) {
+        for (const flag of sessionData.flags) {
+          await this.addFlag(sessionData.id, flag);
+        }
+      }
+
+      return savedSession;
+    } catch (error) {
+      this.logger.error('Failed to create session from extension:', error);
+      throw new Error('Failed to create session from extension');
     }
   }
 
@@ -87,7 +135,7 @@ export class SessionService {
       const countResult = await this.databaseManager.query(countQuery, countParams);
       const total = parseInt(countResult.rows[0].count, 10);
 
-      const sessions = result.rows.map(row => this.mapSessionFromDb(row));
+      const sessions = result.rows.map((row: any) => this.mapSessionFromDb(row));
 
       const pagination: PaginationInfo = {
         page: options.page,
@@ -247,7 +295,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       type: row.type,
       timestamp: row.timestamp,
@@ -261,7 +309,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       data: row.data,
       timestamp: row.timestamp,
@@ -275,7 +323,7 @@ export class SessionService {
       [sessionId]
     );
 
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       eventId: row.event_id,
       note: row.note,

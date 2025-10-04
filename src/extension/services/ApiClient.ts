@@ -1,13 +1,27 @@
 import { SessionData } from '@/shared/types/SessionTypes';
 import { ApiResponse } from '@/shared/types/ApiTypes';
 
+interface QueuedRequest {
+  id: string;
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  body: string;
+  timestamp: number;
+  retryCount: number;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private accessToken: string | null = null;
+  private maxRetries: number = 3;
+  private retryDelay: number = 1000; // 1秒
 
   constructor() {
-    this.baseUrl = process.env.API_BASE_URL || 'http://localhost:3000/api';
+    // Chrome拡張機能では環境変数が利用できないため、定数を使用
+    this.baseUrl = 'http://localhost:3001/api';
     this.loadAccessToken();
+    this.processQueue(); // 起動時にキューを処理
   }
 
   public async authenticate(provider: 'google' | 'github', token: string): Promise<ApiResponse<any>> {
@@ -33,12 +47,25 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
 
   public async saveSession(sessionData: SessionData): Promise<ApiResponse<any>> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    return await this.makeRequest(
+      `${this.baseUrl}/sessions/extension`,
+      'POST',
+      headers,
+      JSON.stringify(sessionData)
+    );
+  }
+
+  public async uploadSession(sessionData: SessionData): Promise<ApiResponse<any>> {
     try {
       const response = await fetch(`${this.baseUrl}/sessions`, {
         method: 'POST',
@@ -53,7 +80,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -71,7 +98,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -89,7 +116,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -109,7 +136,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -127,7 +154,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -143,7 +170,7 @@ export class ApiClient {
         body: JSON.stringify({ 
           data: screenshotData,
           timestamp: new Date().toISOString(),
-          url: window.location.href
+          url: typeof window !== 'undefined' ? window.location.href : 'chrome-extension://' + chrome.runtime.id
         })
       });
 
@@ -151,7 +178,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -174,7 +201,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -192,7 +219,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -226,7 +253,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -249,7 +276,7 @@ export class ApiClient {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -290,6 +317,102 @@ export class ApiClient {
       await chrome.storage.local.remove(['access_token', 'refresh_token']);
     } catch (error) {
       console.error('Failed to clear tokens:', error);
+    }
+  }
+
+  // 再試行キュー機能
+  private async queueRequest(url: string, method: string, headers: Record<string, string>, body: string): Promise<void> {
+    try {
+      const request: QueuedRequest = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        url,
+        method,
+        headers,
+        body,
+        timestamp: Date.now(),
+        retryCount: 0
+      };
+
+      const result = await chrome.storage.local.get('api_queue');
+      const queue: QueuedRequest[] = result.api_queue || [];
+      queue.push(request);
+      
+      await chrome.storage.local.set({ api_queue: queue });
+      console.log('Request queued for retry:', request.id);
+    } catch (error) {
+      console.error('Failed to queue request:', error);
+    }
+  }
+
+  private async processQueue(): Promise<void> {
+    try {
+      const result = await chrome.storage.local.get('api_queue');
+      const queue: QueuedRequest[] = result.api_queue || [];
+      
+      if (queue.length === 0) return;
+
+      console.log(`Processing ${queue.length} queued requests...`);
+      
+      const processedQueue: QueuedRequest[] = [];
+      
+      for (const request of queue) {
+        try {
+          const response = await fetch(request.url, {
+            method: request.method,
+            headers: request.headers,
+            body: request.body
+          });
+
+          if (response.ok) {
+            console.log('Queued request succeeded:', request.id);
+            // 成功したリクエストはキューから削除
+          } else {
+            // 失敗したリクエストは再試行回数を増やしてキューに戻す
+            request.retryCount++;
+            if (request.retryCount < this.maxRetries) {
+              processedQueue.push(request);
+              console.log('Queued request failed, will retry:', request.id, request.retryCount);
+            } else {
+              console.log('Queued request failed after max retries:', request.id);
+            }
+          }
+        } catch (error) {
+          request.retryCount++;
+          if (request.retryCount < this.maxRetries) {
+            processedQueue.push(request);
+            console.log('Queued request error, will retry:', request.id, request.retryCount);
+          } else {
+            console.log('Queued request error after max retries:', request.id);
+          }
+        }
+      }
+
+      await chrome.storage.local.set({ api_queue: processedQueue });
+    } catch (error) {
+      console.error('Failed to process queue:', error);
+    }
+  }
+
+  private async makeRequest(url: string, method: string, headers: Record<string, string>, body?: string): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      // ネットワークエラーの場合はキューに追加
+      if (body) {
+        await this.queueRequest(url, method, headers, body);
+      }
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
     }
   }
 }

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -8,6 +8,7 @@ import { SessionController } from './controllers/SessionController';
 import { LogController } from './controllers/LogController';
 import { ReportController } from './controllers/ReportController';
 import { Logger } from './utils/Logger';
+import '../shared/types/ExpressTypes';
 
 // 環境変数の読み込み
 dotenv.config();
@@ -20,16 +21,20 @@ class BackendServer {
 
   constructor() {
     this.app = express();
-    this.port = parseInt(process.env.PORT || '3000', 10);
+    this.port = parseInt(process.env.PORT || '3001', 10);
     this.databaseManager = new DatabaseManager();
     this.logger = new Logger();
   }
 
   public async initialize(): Promise<void> {
     try {
-      // データベース接続
-      await this.databaseManager.connect();
-      this.logger.info('Database connected successfully');
+      // データベース接続（オプショナル）
+      try {
+        await this.databaseManager.connect();
+        this.logger.info('Database connected successfully');
+      } catch (dbError) {
+        this.logger.warn('Database connection failed, continuing without database:', dbError);
+      }
 
       // ミドルウェアの設定
       this.setupMiddleware();
@@ -53,20 +58,22 @@ class BackendServer {
     this.app.use(helmet());
 
     // CORS設定
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-      credentials: true
-    }));
+    this.app.use(
+      cors({
+        origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+        credentials: true,
+      })
+    );
 
     // JSONパーサー
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     // ログ出力
-    this.app.use((req, res, next) => {
-      this.logger.info(`${req.method} ${req.path}`, {
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      this.logger.info(`${req.method} ${req.url}`, {
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: req.get('User-Agent'),
       });
       next();
     });
@@ -74,7 +81,7 @@ class BackendServer {
 
   private setupRoutes(): void {
     // ヘルスチェック
-    this.app.get('/health', (req, res) => {
+    this.app.get('/health', (req: Request, res: Response) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
@@ -97,23 +104,23 @@ class BackendServer {
     this.app.use('/api/reports', reportController.getRouter());
 
     // 404ハンドラー
-    this.app.use('*', (req, res) => {
+    this.app.use('*', (req: Request, res: Response) => {
       res.status(404).json({ error: 'Not Found' });
     });
   }
 
   private setupErrorHandling(): void {
     // エラーハンドリングミドルウェア
-    this.app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    this.app.use((error: any, req: Request, res: Response, next: NextFunction) => {
       this.logger.error('Unhandled error:', error);
-      
+
       if (res.headersSent) {
         return next(error);
       }
 
       res.status(error.status || 500).json({
         error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : error.message,
-        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }),
       });
     });
 
@@ -131,7 +138,7 @@ class BackendServer {
 
   private async gracefulShutdown(): Promise<void> {
     this.logger.info('Shutting down server...');
-    
+
     try {
       await this.databaseManager.disconnect();
       this.logger.info('Database disconnected');
@@ -145,7 +152,7 @@ class BackendServer {
 
 // サーバーを起動
 const server = new BackendServer();
-server.initialize().catch((error) => {
+server.initialize().catch(error => {
   console.error('Failed to start server:', error);
   process.exit(1);
 });

@@ -45,18 +45,22 @@ export class FloatingButton {
       switch (status) {
         case 'active':
           mainButton.innerHTML = '⏹';
-          mainButton.title = 'テスト停止';
+          (mainButton as HTMLElement).title = 'テスト停止';
           break;
         case 'paused':
           mainButton.innerHTML = '▶';
-          mainButton.title = 'テスト再開';
+          (mainButton as HTMLElement).title = 'テスト再開';
           break;
         case 'inactive':
           mainButton.innerHTML = '▶';
-          mainButton.title = 'テスト開始';
+          (mainButton as HTMLElement).title = 'テスト開始';
           break;
       }
     }
+  }
+
+  public updateSessionStatus(isActive: boolean): void {
+    this.updateStatus(isActive ? 'active' : 'inactive');
   }
 
   public toggleMinimize(): void {
@@ -66,7 +70,7 @@ export class FloatingButton {
     const menu = this.button.querySelector('.menu');
     
     if (menu) {
-      menu.style.display = this.isMinimized ? 'none' : 'flex';
+      (menu as HTMLElement).style.display = this.isMinimized ? 'none' : 'flex';
     }
   }
 

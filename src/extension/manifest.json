@@ -46,7 +46,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "floating-button.html"
+        "floating-button.html",
+        "logs.html",
+        "report.html"
       ],
       "matches": [
         "<all_urls>"

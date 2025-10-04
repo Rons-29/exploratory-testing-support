@@ -59,6 +59,10 @@ export class FloatingButton {
     }
   }
 
+  public updateSessionStatus(isActive: boolean): void {
+    this.updateStatus(isActive ? 'active' : 'inactive');
+  }
+
   public toggleMinimize(): void {
     if (!this.button) return;
 

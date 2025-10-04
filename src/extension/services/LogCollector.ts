@@ -204,6 +204,23 @@ export class LogCollector {
       stack: this.getStackTrace()
     };
 
+    // test_logsへも即時保存させる（Background経由）
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_LOG',
+        entry: {
+          id: logData.id,
+          type: 'console',
+          message: logData.message,
+          timestamp: Date.now(),
+          details: { level: logData.level, args: logData.args, stack: logData.stack },
+          url: logData.url
+        }
+      });
+    } catch (e) {
+      // no-op
+    }
+
     await this.sessionManager.addEvent({
       type: 'console',
       timestamp: logData.timestamp,
@@ -230,6 +247,22 @@ export class LogCollector {
       }
     };
 
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_LOG',
+        entry: {
+          id: logData.id,
+          type: networkData.success ? 'network' : 'network_error',
+          message: logData.message,
+          timestamp: Date.now(),
+          details: networkData,
+          url: logData.url
+        }
+      });
+    } catch (e) {
+      // no-op
+    }
+
     await this.sessionManager.addEvent({
       type: 'network',
       timestamp: logData.timestamp,
@@ -255,6 +288,22 @@ export class LogCollector {
         stack: errorData.stack
       }
     };
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'SAVE_LOG',
+        entry: {
+          id: logData.id,
+          type: 'error',
+          message: logData.message,
+          timestamp: Date.now(),
+          details: errorData,
+          url: logData.url
+        }
+      });
+    } catch (e) {
+      // no-op
+    }
 
     await this.sessionManager.addEvent({
       type: 'error',

@@ -5,7 +5,10 @@ module.exports = {
   entry: {
     background: './src/extension/background.ts',
     content: './src/extension/content.ts',
-    popup: './src/extension/popup.ts'
+    popup: './src/extension/popup.ts',
+    logs: './src/extension/logs.ts',
+    report: './src/extension/report.ts',
+    'floating-button': './src/extension/floating-button.ts'
   },
   module: {
     rules: [
@@ -54,6 +57,18 @@ module.exports = {
           from: 'src/extension/popup.css',
           to: 'popup.css'
         },
+            {
+              from: 'src/extension/logs.html',
+              to: 'logs.html'
+            },
+            {
+              from: 'src/extension/report.html',
+              to: 'report.html'
+            },
+            {
+              from: 'src/extension/floating-button.html',
+              to: 'floating-button.html'
+            },
         {
           from: 'src/extension/icons',
           to: 'icons'

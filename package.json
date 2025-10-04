@@ -26,7 +26,12 @@
     "clean": "rimraf dist",
     "prepare": "husky install",
     "setup": "npm install && npm run db:migrate",
-    "start": "npm run build && npm run dev"
+    "start": "npm run build && npm run dev",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down -v",
+    "db:logs": "docker compose logs -f db",
+    "db:psql": "docker compose exec -it db psql -U ets -d ets",
+    "db:reinit": "docker compose down -v && docker compose up -d db"
   },
   "keywords": [
     "testing",

@@ -1,13 +1,18 @@
 import { SessionManager } from './services/SessionManager';
 import { ApiClient } from './services/ApiClient';
+import { DevToolsMCP } from './services/DevToolsMCP';
 
 class BackgroundService {
   private sessionManager: SessionManager;
   private apiClient: ApiClient;
+  private devToolsMCP: DevToolsMCP;
+  private devToolsAttached: Set<number> = new Set();
+  private networkRequests: Map<number, any[]> = new Map();
 
   constructor() {
     this.sessionManager = new SessionManager();
     this.apiClient = new ApiClient();
+    this.devToolsMCP = new DevToolsMCP();
   }
 
   public initialize(): void {
@@ -100,6 +105,34 @@ class BackgroundService {
           console.log('探索的テスト支援: Exporting report...');
           this.handleExportReport(message, sendResponse);
           return true; // 非同期処理のため
+        case 'CLEAR_SESSION':
+          console.log('探索的テスト支援: Clearing session...');
+          this.handleClearSession(sendResponse);
+          return true; // 非同期処理のため
+        case 'GET_LOGS':
+          console.log('探索的テスト支援: Getting logs...');
+          this.handleGetLogs(sendResponse);
+          return true; // 非同期処理のため
+        case 'SAVE_LOG':
+          console.log('探索的テスト支援: Saving log entry...');
+          this.handleSaveLog(message, sendResponse);
+          return true; // 非同期処理のため
+        case 'CLEAR_LOGS':
+          console.log('探索的テスト支援: Clearing logs...');
+          this.handleClearLogs(sendResponse);
+          return true; // 非同期処理のため
+        case 'MCP_CONNECT':
+          console.log('探索的テスト支援: Connecting to MCP...');
+          this.handleMCPConnect(sendResponse);
+          return true; // 非同期処理のため
+        case 'MCP_ANALYZE':
+          console.log('探索的テスト支援: Analyzing with MCP...');
+          this.handleMCPAnalyze(message, sendResponse);
+          return true; // 非同期処理のため
+        case 'MCP_SNAPSHOT':
+          console.log('探索的テスト支援: Getting MCP snapshot...');
+          this.handleMCPSnapshot(sendResponse);
+          return true; // 非同期処理のため
         default:
           console.warn('探索的テスト支援: Unknown message type:', message.type);
           sendResponse({ success: false, error: 'Unknown message type' });
@@ -115,6 +148,10 @@ class BackgroundService {
   private async handleStartSession(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
       const sessionId = await this.sessionManager.startSession();
+      
+      // DevTools Protocolをアタッチしてネットワーク監視を開始
+      await this.attachDevTools();
+      
       sendResponse({ success: true, sessionId });
     } catch (error) {
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
@@ -125,6 +162,10 @@ class BackgroundService {
     try {
       const sessionData = await this.sessionManager.stopSession();
       await this.apiClient.saveSession(sessionData);
+      
+      // DevToolsをデタッチ
+      await this.detachDevTools();
+      
       sendResponse({ success: true, sessionData });
     } catch (error) {
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
@@ -139,7 +180,16 @@ class BackgroundService {
       if (isActive) {
         console.log('Background: Stopping session...');
         const sessionData = await this.sessionManager.stopSession();
-        await this.apiClient.saveSession(sessionData);
+        console.log('Background: Session data:', sessionData);
+        
+        try {
+          // Background Scriptで直接APIを呼び出し
+          const apiResponse = await this.apiClient.saveSession(sessionData);
+          console.log('Background: API save response:', apiResponse);
+        } catch (apiError) {
+          console.error('Background: API save failed:', apiError);
+          // API送信に失敗してもセッション停止は続行
+        }
         
         // コンテンツスクリプトにセッション停止を通知
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -152,10 +202,23 @@ class BackgroundService {
         console.log('Background: Starting session...');
         const sessionId = await this.sessionManager.startSession();
         
-        // コンテンツスクリプトにセッション開始を通知
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.id) {
-          await this.sendMessageToContentScript(tabs[0].id, { type: 'SESSION_STARTED', sessionId });
+        // すべてのタブにContent Scriptを再注入してセッション開始を通知
+        const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+        for (const tab of tabs) {
+          if (tab.id) {
+            try {
+              // Content Scriptを再注入
+              await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                files: ['content.js']
+              });
+              
+              // セッション開始を通知
+              await this.sendMessageToContentScript(tab.id, { type: 'SESSION_STARTED', sessionId });
+            } catch (error) {
+              console.error(`Background: Failed to inject content script into tab ${tab.id}:`, error);
+            }
+          }
         }
         
         sendResponse({ success: true, sessionId, isActive: true });
@@ -208,74 +271,135 @@ class BackgroundService {
 
   private async handleGetStats(sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const sessionData = await this.sessionManager.getCurrentSession();
+      // ストレージからログを取得して統計を計算
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      
       const stats = {
-        eventCount: sessionData?.events?.length || 0,
-        errorCount: sessionData?.events?.filter((e: any) => e.type === 'console_error' || e.type === 'network_error').length || 0,
-        screenshotCount: sessionData?.screenshots?.length || 0,
-        flagCount: sessionData?.flags?.length || 0
+        eventCount: logs.length,
+        clickCount: logs.filter((log: any) => log.type === 'click').length,
+        keydownCount: logs.filter((log: any) => log.type === 'keydown').length,
+        errorCount: logs.filter((log: any) => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
+        consoleCount: logs.filter((log: any) => log.type === 'console').length,
+        networkCount: logs.filter((log: any) => log.type === 'network').length,
+        networkErrorCount: logs.filter((log: any) => log.type === 'network_error').length,
+        screenshotCount: logs.filter((log: any) => log.type === 'screenshot').length,
+        flagCount: logs.filter((log: any) => log.type === 'flag').length
       };
+      
+      console.log('Background: Stats calculated:', stats);
       sendResponse({ success: true, stats });
     } catch (error) {
+      console.error('Background: Failed to get stats:', error);
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
   private async handleExportReport(message: any, sendResponse: (response?: any) => void): Promise<void> {
     try {
-      const sessionData = await this.sessionManager.getCurrentSession();
-      if (!sessionData) {
-        sendResponse({ success: false, error: 'No active session' });
+      // ストレージからログを取得
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      
+      if (logs.length === 0) {
+        sendResponse({ success: false, error: 'No logs available for export' });
         return;
       }
 
       // 簡単なMarkdownレポートを生成
-      const report = this.generateMarkdownReport(sessionData);
+      const report = this.generateMarkdownReport(logs);
       
       // レポートをポップアップに送信してクリップボードにコピー
       sendResponse({ success: true, report });
     } catch (error) {
+      console.error('Background: Failed to export report:', error);
       sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  private generateMarkdownReport(sessionData: any): string {
-    const startTime = new Date(sessionData.startTime).toLocaleString('ja-JP');
-    const endTime = sessionData.endTime ? new Date(sessionData.endTime).toLocaleString('ja-JP') : '進行中';
-    const duration = sessionData.endTime 
-      ? Math.floor((new Date(sessionData.endTime).getTime() - new Date(sessionData.startTime).getTime()) / 1000 / 60)
-      : Math.floor((Date.now() - new Date(sessionData.startTime).getTime()) / 1000 / 60);
+  private generateMarkdownReport(logs: any[]): string {
+    const now = new Date();
+    const firstLog = logs.length > 0 ? logs[0] : null;
+    const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
+    
+    const startTime = firstLog ? new Date(firstLog.timestamp).toLocaleString('ja-JP') : now.toLocaleString('ja-JP');
+    const endTime = lastLog ? new Date(lastLog.timestamp).toLocaleString('ja-JP') : now.toLocaleString('ja-JP');
+    const duration = firstLog ? Math.floor((now.getTime() - firstLog.timestamp) / 1000 / 60) : 0;
 
-    let report = `# テストレポート\n\n`;
+    let report = `# 探索的テストレポート\n\n`;
     report += `## セッション情報\n`;
-    report += `- **セッションID**: ${sessionData.id}\n`;
-    report += `- **対象URL**: ${sessionData.targetUrl || 'N/A'}\n`;
+    report += `- **生成時刻**: ${now.toLocaleString('ja-JP')}\n`;
     report += `- **開始時刻**: ${startTime}\n`;
     report += `- **終了時刻**: ${endTime}\n`;
     report += `- **実行時間**: ${duration}分\n\n`;
 
-    report += `## 統計情報\n`;
-    report += `- **総イベント数**: ${sessionData.events?.length || 0}\n`;
-    report += `- **エラー数**: ${sessionData.events?.filter((e: any) => e.type === 'console_error' || e.type === 'network_error').length || 0}\n`;
-    report += `- **スクリーンショット数**: ${sessionData.screenshots?.length || 0}\n`;
-    report += `- **フラグ数**: ${sessionData.flags?.length || 0}\n\n`;
+    // 統計情報を計算
+    const eventCount = logs.length;
+    const clickCount = logs.filter(log => log.type === 'click').length;
+    const keydownCount = logs.filter(log => log.type === 'keydown').length;
+    const consoleCount = logs.filter(log => log.type === 'console').length;
+    const networkCount = logs.filter(log => log.type === 'network').length;
+    const networkErrorCount = logs.filter(log => log.type === 'network_error').length;
+    const errorCount = logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length;
+    const screenshotCount = logs.filter(log => log.type === 'screenshot').length;
+    const flagCount = logs.filter(log => log.type === 'flag').length;
 
-    if (sessionData.flags && sessionData.flags.length > 0) {
+    report += `## 統計情報\n`;
+    report += `- **総イベント数**: ${eventCount}\n`;
+    report += `- **クリック数**: ${clickCount}\n`;
+    report += `- **キー入力数**: ${keydownCount}\n`;
+    report += `- **コンソール数**: ${consoleCount}\n`;
+    report += `- **ネットワーク数**: ${networkCount}\n`;
+    report += `- **ネットワークエラー数**: ${networkErrorCount}\n`;
+    report += `- **エラー数**: ${errorCount}\n`;
+    report += `- **スクリーンショット数**: ${screenshotCount}\n`;
+    report += `- **フラグ数**: ${flagCount}\n\n`;
+
+    // フラグ（発見された問題）を表示
+    const flags = logs.filter(log => log.type === 'flag');
+    if (flags.length > 0) {
       report += `## 発見された問題\n\n`;
-      sessionData.flags.forEach((flag: any, index: number) => {
-        report += `### ${index + 1}. ${flag.note}\n`;
+      flags.forEach((flag: any, index: number) => {
+        report += `### ${index + 1}. ${flag.message}\n`;
         report += `- **時刻**: ${new Date(flag.timestamp).toLocaleString('ja-JP')}\n`;
-        report += `- **イベントID**: ${flag.eventId}\n\n`;
+        report += `- **URL**: ${flag.url || 'N/A'}\n`;
+        if (flag.details) {
+          report += `- **詳細**: ${JSON.stringify(flag.details, null, 2)}\n`;
+        }
+        report += `\n`;
       });
     }
 
-    if (sessionData.events && sessionData.events.length > 0) {
-      report += `## イベントログ\n\n`;
-      sessionData.events.forEach((event: any, index: number) => {
-        const time = new Date(event.timestamp).toLocaleString('ja-JP');
-        report += `### ${index + 1}. ${event.type} (${time})\n`;
-        report += `\`\`\`json\n${JSON.stringify(event.payload, null, 2)}\n\`\`\`\n\n`;
+    // エラーログを表示
+    const errors = logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error'));
+    if (errors.length > 0) {
+      report += `## エラーログ\n\n`;
+      errors.forEach((error: any, index: number) => {
+        report += `### ${index + 1}. ${error.message} (${new Date(error.timestamp).toLocaleString('ja-JP')})\n`;
+        report += `- **URL**: ${error.url || 'N/A'}\n`;
+        if (error.details) {
+          report += `- **詳細**: \`\`\`json\n${JSON.stringify(error.details, null, 2)}\n\`\`\`\n`;
+        }
+        report += `\n`;
       });
+    }
+
+    // イベントログのサマリー
+    if (logs.length > 0) {
+      report += `## イベントログサマリー\n\n`;
+      report += `| 時刻 | タイプ | メッセージ | URL |\n`;
+      report += `|------|--------|------------|-----|\n`;
+      
+      logs.slice(-20).forEach((log: any) => { // 最新20件のみ表示
+        const time = new Date(log.timestamp).toLocaleString('ja-JP');
+        const message = log.message.replace(/\|/g, '\\|').substring(0, 50); // パイプ文字をエスケープ、50文字で切り詰め
+        const url = (log.url || '').replace(/\|/g, '\\|').substring(0, 30); // 30文字で切り詰め
+        report += `| ${time} | ${log.type} | ${message} | ${url} |\n`;
+      });
+      
+      if (logs.length > 20) {
+        report += `\n*最新20件を表示（全${logs.length}件中）*\n`;
+      }
     }
 
     return report;
@@ -291,6 +415,360 @@ class BackgroundService {
         }
       });
     });
+  }
+
+  private async attachDevTools(): Promise<void> {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs.length === 0) return;
+
+      const tabId = tabs[0].id!;
+      
+      // 既にアタッチされている場合はスキップ
+      if (this.devToolsAttached.has(tabId)) {
+        console.log('DevTools already attached to tab:', tabId);
+        return;
+      }
+
+      // DevTools Protocolをアタッチ
+      await new Promise<void>((resolve, reject) => {
+        chrome.debugger.attach({ tabId }, '1.3', () => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to attach debugger:', chrome.runtime.lastError);
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            console.log('DevTools attached to tab:', tabId);
+            this.devToolsAttached.add(tabId);
+            resolve();
+          }
+        });
+      });
+
+      // ネットワーク監視を有効化
+      await this.enableNetworkMonitoring(tabId);
+      
+      // コンソール監視を有効化
+      await this.enableConsoleMonitoring(tabId);
+
+    } catch (error) {
+      console.error('Failed to attach DevTools:', error);
+    }
+  }
+
+  private async detachDevTools(): Promise<void> {
+    try {
+      for (const tabId of this.devToolsAttached) {
+        await new Promise<void>((resolve) => {
+          chrome.debugger.detach({ tabId }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('Failed to detach debugger:', chrome.runtime.lastError);
+            } else {
+              console.log('DevTools detached from tab:', tabId);
+            }
+            resolve();
+          });
+        });
+      }
+      this.devToolsAttached.clear();
+    } catch (error) {
+      console.error('Failed to detach DevTools:', error);
+    }
+  }
+
+  private async enableNetworkMonitoring(tabId: number): Promise<void> {
+    try {
+      // ネットワーク監視を有効化
+      await new Promise<void>((resolve, reject) => {
+        chrome.debugger.sendCommand({ tabId }, 'Network.enable', {}, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // ネットワークイベントのリスナーを設定
+      chrome.debugger.onEvent.addListener((source, method, params) => {
+        if (source.tabId === tabId && method.startsWith('Network.')) {
+          this.handleNetworkEvent(method, params, tabId);
+        }
+      });
+
+      console.log('Network monitoring enabled for tab:', tabId);
+    } catch (error) {
+      console.error('Failed to enable network monitoring:', error);
+    }
+  }
+
+  private async enableConsoleMonitoring(tabId: number): Promise<void> {
+    try {
+      // コンソール監視を有効化
+      await new Promise<void>((resolve, reject) => {
+        chrome.debugger.sendCommand({ tabId }, 'Runtime.enable', {}, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // コンソールイベントのリスナーを設定
+      chrome.debugger.onEvent.addListener((source, method, params) => {
+        if (source.tabId === tabId && method === 'Runtime.consoleAPICalled') {
+          this.handleConsoleEvent(params, tabId);
+        }
+      });
+
+      console.log('Console monitoring enabled for tab:', tabId);
+    } catch (error) {
+      console.error('Failed to enable console monitoring:', error);
+    }
+  }
+
+  private handleNetworkEvent(method: string, params: any, tabId: number): void {
+    if (!this.networkRequests.has(tabId)) {
+      this.networkRequests.set(tabId, []);
+    }
+
+    const requests = this.networkRequests.get(tabId)!;
+
+    switch (method) {
+      case 'Network.requestWillBeSent':
+        requests.push({
+          type: 'request',
+          requestId: params.requestId,
+          url: params.request.url,
+          method: params.request.method,
+          headers: params.request.headers,
+          timestamp: Date.now(),
+          initiator: params.initiator
+        });
+        break;
+
+      case 'Network.responseReceived':
+        const requestIndex = requests.findIndex(r => r.requestId === params.requestId);
+        if (requestIndex !== -1) {
+          requests[requestIndex].response = {
+            status: params.response.status,
+            statusText: params.response.statusText,
+            headers: params.response.headers,
+            mimeType: params.response.mimeType
+          };
+        }
+        break;
+
+      case 'Network.loadingFinished':
+        const finishedIndex = requests.findIndex(r => r.requestId === params.requestId);
+        if (finishedIndex !== -1) {
+          requests[finishedIndex].finished = true;
+          requests[finishedIndex].encodedDataLength = params.encodedDataLength;
+          
+          // ネットワークリクエストをログに保存
+          this.saveNetworkRequest(requests[finishedIndex], tabId);
+        }
+        break;
+
+      case 'Network.loadingFailed':
+        const failedIndex = requests.findIndex(r => r.requestId === params.requestId);
+        if (failedIndex !== -1) {
+          requests[failedIndex].failed = true;
+          requests[failedIndex].errorText = params.errorText;
+          
+          // ネットワークエラーをログに保存
+          this.saveNetworkError(requests[failedIndex], tabId);
+        }
+        break;
+    }
+  }
+
+  private handleConsoleEvent(params: any, tabId: number): void {
+    const { type, args, timestamp } = params;
+    
+    // コンソールイベントをログに保存
+    this.saveConsoleEvent(type, args, timestamp, tabId);
+  }
+
+  private async saveNetworkRequest(request: any, tabId: number): Promise<void> {
+    try {
+      const logEntry = {
+        id: `network_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'network',
+        message: `ネットワークリクエスト: ${request.method} ${request.url}`,
+        timestamp: request.timestamp,
+        details: {
+          url: request.url,
+          method: request.method,
+          status: request.response?.status,
+          statusText: request.response?.statusText,
+          duration: request.finished ? Date.now() - request.timestamp : null,
+          headers: request.headers,
+          responseHeaders: request.response?.headers,
+          mimeType: request.response?.mimeType,
+          encodedDataLength: request.encodedDataLength,
+          initiator: request.initiator
+        },
+        url: request.url
+      };
+
+      // ストレージに保存
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      logs.push(logEntry);
+      
+      if (logs.length > 1000) {
+        logs.splice(0, logs.length - 1000);
+      }
+
+      await chrome.storage.local.set({ test_logs: logs });
+    } catch (error) {
+      console.error('Failed to save network request:', error);
+    }
+  }
+
+  private async saveNetworkError(request: any, tabId: number): Promise<void> {
+    try {
+      const logEntry = {
+        id: `network_error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'network_error',
+        message: `ネットワークエラー: ${request.method} ${request.url}`,
+        timestamp: request.timestamp,
+        details: {
+          url: request.url,
+          method: request.method,
+          error: request.errorText,
+          duration: Date.now() - request.timestamp,
+          initiator: request.initiator
+        },
+        url: request.url
+      };
+
+      // ストレージに保存
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      logs.push(logEntry);
+      
+      if (logs.length > 1000) {
+        logs.splice(0, logs.length - 1000);
+      }
+
+      await chrome.storage.local.set({ test_logs: logs });
+    } catch (error) {
+      console.error('Failed to save network error:', error);
+    }
+  }
+
+  private async saveConsoleEvent(type: string, args: any[], timestamp: number, tabId: number): Promise<void> {
+    try {
+      const logEntry = {
+        id: `console_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'console',
+        message: `コンソール${type}: ${args.map(arg => String(arg)).join(' ')}`,
+        timestamp: timestamp,
+        details: {
+          level: type,
+          args: args,
+          tabId: tabId
+        },
+        url: (await chrome.tabs.get(tabId)).url
+      };
+
+      // ストレージに保存
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      logs.push(logEntry);
+      
+      if (logs.length > 1000) {
+        logs.splice(0, logs.length - 1000);
+      }
+
+      await chrome.storage.local.set({ test_logs: logs });
+    } catch (error) {
+      console.error('Failed to save console event:', error);
+    }
+  }
+
+  private async handleMCPConnect(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      const isConnected = await this.devToolsMCP.testConnection();
+      sendResponse({ success: true, connected: isConnected });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleMCPAnalyze(message: any, sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      const context = message.context || {};
+      const result = await this.devToolsMCP.analyzeWithAI(context);
+      sendResponse(result);
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleMCPSnapshot(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      const result = await this.devToolsMCP.getBrowserSnapshot();
+      sendResponse(result);
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleClearSession(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      await this.sessionManager.clearSession();
+      sendResponse({ success: true, message: 'Session cleared' });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleGetLogs(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      // ストレージからログを取得
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      sendResponse({ success: true, logs });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleClearLogs(sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      await chrome.storage.local.remove('test_logs');
+      sendResponse({ success: true, message: 'Logs cleared' });
+    } catch (error) {
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private async handleSaveLog(message: any, sendResponse: (response?: any) => void): Promise<void> {
+    try {
+      console.log('Background: SAVE_LOG received, message:', message);
+      const entry = message.entry;
+      if (!entry) {
+        console.log('Background: No entry provided in SAVE_LOG message');
+        sendResponse({ success: false, error: 'No entry provided' });
+        return;
+      }
+      console.log('Background: Processing log entry:', entry);
+      const result = await chrome.storage.local.get('test_logs');
+      const logs = result.test_logs || [];
+      logs.push(entry);
+      if (logs.length > 1000) {
+        logs.splice(0, logs.length - 1000);
+      }
+      await chrome.storage.local.set({ test_logs: logs });
+      console.log('Background: Log saved successfully, total logs:', logs.length);
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Background: Failed to save log:', error);
+      sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+    }
   }
 }
 

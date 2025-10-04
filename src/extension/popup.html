@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>探索的テスト支援</title>
+  <title>探索的テスト支援</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
+    <!-- ヘッダー -->
     <div class="header">
-      <h1 class="title">探索的テスト支援</h1>
+      <h1 class="title">🎯 探索的テスト支援</h1>
       <p class="subtitle">探索的テスト支援ツール</p>
     </div>
 
+    <!-- ステータスセクション -->
     <div class="status-section">
       <h3 class="status-title">ステータス</h3>
       <div id="statusIndicator" class="status-indicator">
@@ -21,6 +23,7 @@
       </div>
     </div>
 
+    <!-- メインコントロール -->
     <div class="controls">
       <button id="toggleSession" class="btn btn-primary">
         <span class="btn-icon">▶</span>
@@ -33,31 +36,70 @@
       </div>
     </div>
 
+    <!-- クイックアクション -->
     <div class="menu-section">
       <h3 class="menu-title">クイックアクション</h3>
       
-      <a href="#" id="takeScreenshot" class="menu-item btn">
-        <span class="menu-icon">📷</span>
-        <span class="menu-text">スクリーンショット</span>
-      </a>
-      
-      <a href="#" id="viewLogs" class="menu-item btn">
-        <span class="menu-icon">📋</span>
-        <span class="menu-text">ログ確認</span>
-      </a>
-      
-      <a href="#" id="exportReport" class="menu-item btn">
-        <span class="menu-icon">📄</span>
-        <span class="menu-text">レポート出力</span>
-      </a>
+      <div class="menu-grid">
+        <a href="#" id="takeScreenshot" class="menu-item">
+          <span class="menu-icon">📷</span>
+          <span class="menu-text">スクリーンショット</span>
+        </a>
+        
+        <a href="#" id="viewLogs" class="menu-item">
+          <span class="menu-icon">📋</span>
+          <span class="menu-text">ログ確認</span>
+        </a>
+        
+        <a href="#" id="exportReport" class="menu-item">
+          <span class="menu-icon">📄</span>
+          <span class="menu-text">レポート出力</span>
+        </a>
+        
+        <a href="#" id="viewReport" class="menu-item">
+          <span class="menu-icon">📊</span>
+          <span class="menu-text">レポート表示</span>
+        </a>
+        
+        <a href="#" id="mcpAnalyze" class="menu-item">
+          <span class="menu-icon">🤖</span>
+          <span class="menu-text">AI分析</span>
+        </a>
+        
+        <a href="#" id="mcpSnapshot" class="menu-item">
+          <span class="menu-icon">📸</span>
+          <span class="menu-text">MCPスナップショット</span>
+        </a>
+      </div>
     </div>
 
+    <!-- 統計情報 -->
     <div class="stats">
       <h3 class="stats-title">統計情報</h3>
       <div class="stats-grid">
         <div class="stat-item">
           <p class="stat-value" id="eventCount">0</p>
-          <p class="stat-label">イベント数</p>
+          <p class="stat-label">総イベント数</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="clickCount">0</p>
+          <p class="stat-label">クリック数</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="keydownCount">0</p>
+          <p class="stat-label">キー入力数</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="consoleCount">0</p>
+          <p class="stat-label">コンソール数</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="networkCount">0</p>
+          <p class="stat-label">ネットワーク数</p>
+        </div>
+        <div class="stat-item">
+          <p class="stat-value" id="networkErrorCount">0</p>
+          <p class="stat-label">ネットワークエラー数</p>
         </div>
         <div class="stat-item">
           <p class="stat-value" id="errorCount">0</p>
@@ -65,7 +107,7 @@
         </div>
         <div class="stat-item">
           <p class="stat-value" id="screenshotCount">0</p>
-          <p class="stat-label">スクリーンショット</p>
+          <p class="stat-label">スクリーンショット数</p>
         </div>
         <div class="stat-item">
           <p class="stat-value" id="flagCount">0</p>
@@ -74,6 +116,7 @@
       </div>
     </div>
 
+    <!-- フッター -->
     <div class="footer">
       <p class="version">v1.0.0</p>
     </div>

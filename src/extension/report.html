@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レポート表示 - 探索的テスト支援</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+
+        .report-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .copy-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .copy-success.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 探索的テストレポート</h1>
+            <p>生成されたレポートを表示・管理できます</p>
+        </div>
+
+        <div class="copy-success" id="copySuccess">
+            ✅ レポートがクリップボードにコピーされました！
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="generateReport">
+                🔄 レポート再生成
+            </button>
+            <button class="btn btn-success" id="copyReport">
+                📋 クリップボードにコピー
+            </button>
+            <button class="btn btn-secondary" id="downloadReport">
+                💾 ファイルとしてダウンロード
+            </button>
+            <button class="btn btn-secondary" id="clearReport">
+                🗑️ レポートをクリア
+            </button>
+        </div>
+
+        <div class="stats-summary" id="statsSummary" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalEvents">0</div>
+                <div class="stat-label">総イベント数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="clickEvents">0</div>
+                <div class="stat-label">クリック数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="keyEvents">0</div>
+                <div class="stat-label">キー入力数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="consoleEvents">0</div>
+                <div class="stat-label">コンソール数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="networkEvents">0</div>
+                <div class="stat-label">ネットワーク数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="networkErrorEvents">0</div>
+                <div class="stat-label">ネットワークエラー数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="errorEvents">0</div>
+                <div class="stat-label">エラー数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="screenshotEvents">0</div>
+                <div class="stat-label">スクリーンショット数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="flagEvents">0</div>
+                <div class="stat-label">フラグ数</div>
+            </div>
+        </div>
+
+        <div class="report-content" id="reportContent">
+            <div class="loading">
+                <h3>レポートを読み込み中...</h3>
+                <p>しばらくお待ちください</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="report.js"></script>
+</body>
+</html>

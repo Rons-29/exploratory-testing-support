@@ -16,7 +16,7 @@ CREATE TABLE users (
 -- セッションテーブル
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE, -- NULL許可（拡張機能用）
     name VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'active', -- 'active', 'paused', 'completed', 'cancelled'

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログ確認 - 探索的テスト支援</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+
+        .logs-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .logs-header {
+            background: #34495e;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logs-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-timestamp {
+            color: #666;
+            font-size: 12px;
+            white-space: nowrap;
+            min-width: 120px;
+        }
+
+        .log-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .log-type.click {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .log-type.keydown {
+            background-color: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .log-type.error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .log-type.console {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .log-type.network {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .log-type.screenshot {
+            background-color: #e1f5fe;
+            color: #0277bd;
+        }
+
+        .log-type.flag {
+            background-color: #fff8e1;
+            color: #f57f17;
+        }
+
+        .log-message {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .log-details {
+            margin-top: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #999;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 ログ確認</h1>
+            <p>探索的テストセッションのログを確認できます</p>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalEvents">0</div>
+                <div class="stat-label">総イベント数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="clickEvents">0</div>
+                <div class="stat-label">クリック数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="keyEvents">0</div>
+                <div class="stat-label">キー入力数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="consoleEvents">0</div>
+                <div class="stat-label">コンソール数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="networkEvents">0</div>
+                <div class="stat-label">ネットワーク数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="networkErrorEvents">0</div>
+                <div class="stat-label">ネットワークエラー数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="errorEvents">0</div>
+                <div class="stat-label">エラー数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="screenshotEvents">0</div>
+                <div class="stat-label">スクリーンショット数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="flagEvents">0</div>
+                <div class="stat-label">フラグ数</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label for="typeFilter">イベントタイプ</label>
+                    <select id="typeFilter">
+                        <option value="all">すべて</option>
+                        <option value="click">クリック</option>
+                        <option value="keydown">キー入力</option>
+                        <option value="error">エラー</option>
+                        <option value="console">コンソール</option>
+                        <option value="network">ネットワーク</option>
+                        <option value="network_error">ネットワークエラー</option>
+                        <option value="screenshot">スクリーンショット</option>
+                        <option value="flag">フラグ</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="searchInput">検索</label>
+                    <input type="text" id="searchInput" placeholder="ログを検索...">
+                </div>
+                <div class="filter-group">
+                    <button class="btn btn-primary" id="refreshBtn">🔄 更新</button>
+                </div>
+                <div class="filter-group">
+                    <button class="btn btn-secondary" id="clearBtn">🗑️ クリア</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-container">
+            <div class="logs-header">
+                <h3>ログエントリ</h3>
+                <span id="logCount">0件</span>
+            </div>
+            <div class="logs-content" id="logsContent">
+                <div class="loading">ログを読み込み中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="logs.js"></script>
+</body>
+</html>

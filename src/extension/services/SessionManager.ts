@@ -91,6 +91,12 @@ export class SessionManager {
     return isActive;
   }
 
+  public async clearSession(): Promise<void> {
+    this.currentSession = null;
+    await chrome.storage.local.remove(this.sessionStorageKey);
+    console.log('SessionManager: Session cleared');
+  }
+
   public async getCurrentSession(): Promise<SessionData | null> {
     return this.currentSession;
   }

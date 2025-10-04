@@ -30,6 +30,54 @@ export class SessionService {
     }
   }
 
+  public async createSessionFromExtension(sessionData: SessionData): Promise<SessionData> {
+    try {
+      // 拡張機能からのセッションデータをそのまま保存（user_idはNULLで保存）
+      // IDはUUID形式に変換（拡張機能のIDは文字列なので、UUIDを新規生成）
+      const result = await this.databaseManager.query(
+        'INSERT INTO sessions (id, user_id, name, description, status, start_time, end_time, metadata) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [
+          null, // user_idはNULL（拡張機能用）
+          sessionData.name || 'Extension Session',
+          sessionData.description || '',
+          sessionData.status || SessionStatus.COMPLETED,
+          sessionData.startTime,
+          sessionData.endTime,
+          JSON.stringify({
+            ...sessionData.metadata,
+            originalId: sessionData.id // 元のIDをメタデータに保存
+          })
+        ]
+      );
+
+      const savedSession = this.mapSessionFromDb(result.rows[0]);
+
+      // イベント、スクリーンショット、フラグも保存
+      if (sessionData.events && sessionData.events.length > 0) {
+        for (const event of sessionData.events) {
+          await this.addEvent(sessionData.id, event);
+        }
+      }
+
+      if (sessionData.screenshots && sessionData.screenshots.length > 0) {
+        for (const screenshot of sessionData.screenshots) {
+          await this.addScreenshot(sessionData.id, screenshot);
+        }
+      }
+
+      if (sessionData.flags && sessionData.flags.length > 0) {
+        for (const flag of sessionData.flags) {
+          await this.addFlag(sessionData.id, flag);
+        }
+      }
+
+      return savedSession;
+    } catch (error) {
+      this.logger.error('Failed to create session from extension:', error);
+      throw new Error('Failed to create session from extension');
+    }
+  }
+
   public async getSession(sessionId: string, userId: string): Promise<SessionData | null> {
     try {
       const result = await this.databaseManager.query(

@@ -1,289 +1,193 @@
-interface LogEntry {
-  id: string;
-  type: string;
-  message: string;
-  timestamp: number;
-  details?: any;
-  element?: string;
-  url?: string;
-  level?: string;
-}
-
-interface ReportData {
-  sessionId: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  stats: {
-    total: number;
-    click: number;
-    key: number;
-    console: number;
-    network: number;
-    networkError: number;
-    error: number;
-    screenshot: number;
-    flag: number;
-  };
-  report: string;
-}
-
-class ReportViewer {
-  private reportData: ReportData | null = null;
+class ReportGenerator {
+  private sessionData: any = null;
+  private logs: any[] = [];
 
   constructor() {
     this.initializeEventListeners();
-    this.loadReport();
+    this.loadData();
   }
 
   private initializeEventListeners(): void {
-    // レポート再生成
-    const generateBtn = document.getElementById('generateReport');
-    generateBtn?.addEventListener('click', () => {
-      this.generateReport();
-    });
+    // レポート生成ボタン
+    const generateButton = document.getElementById('generateReport');
+    generateButton?.addEventListener('click', () => this.generateReport());
 
-    // クリップボードにコピー
-    const copyBtn = document.getElementById('copyReport');
-    copyBtn?.addEventListener('click', () => {
-      this.copyToClipboard();
-    });
+    // エクスポートボタン
+    const exportButton = document.getElementById('exportReport');
+    exportButton?.addEventListener('click', () => this.exportReport());
 
-    // ファイルとしてダウンロード
-    const downloadBtn = document.getElementById('downloadReport');
-    downloadBtn?.addEventListener('click', () => {
-      this.downloadReport();
-    });
-
-    // レポートをクリア
-    const clearBtn = document.getElementById('clearReport');
-    clearBtn?.addEventListener('click', () => {
-      this.clearReport();
-    });
+    // コピーボタン
+    const copyButton = document.getElementById('copyReport');
+    copyButton?.addEventListener('click', () => this.copyReport());
   }
 
-  private async loadReport(): Promise<void> {
+  private async loadData(): Promise<void> {
     try {
-      console.log('Report: Sending EXPORT_REPORT message to background script...');
-      // バックグラウンドスクリプトからレポートを取得
-      const response = await chrome.runtime.sendMessage({ type: 'EXPORT_REPORT' });
-      console.log('Report: Received response from background script:', response);
-<<<<<<< HEAD
-      
-=======
+      // セッションデータを読み込み
+      const sessionResult = await chrome.storage.local.get('current_session');
+      this.sessionData = sessionResult.current_session;
 
->>>>>>> origin/main
-      if (response && response.success) {
-        const logs = response.logs || [];
-        console.log('Raw logs from background:', logs);
-        console.log('Logs length:', logs.length);
-        const stats = this.calculateStats(logs);
-        console.log('Calculated stats:', stats);
-<<<<<<< HEAD
-        
-=======
+      // ログデータを読み込み
+      const logsResult = await chrome.storage.local.get('test_logs');
+      this.logs = logsResult.test_logs || [];
 
->>>>>>> origin/main
-        this.reportData = {
-          sessionId: 'N/A',
-          startTime: 'N/A',
-          endTime: 'N/A',
-          duration: 0,
-          stats: stats,
-<<<<<<< HEAD
-          report: response.report || 'レポートが生成されませんでした'
-        };
-        
-=======
-          report: response.report || 'レポートが生成されませんでした',
-        };
-
->>>>>>> origin/main
-        console.log('Report data loaded:', this.reportData);
-        this.displayReport();
-        this.updateStats();
-      } else {
-        console.error('Report: Failed to get report from background script:', response);
-        this.showError('レポートの取得に失敗しました: ' + (response?.error || 'Unknown error'));
-      }
+      this.updateStats();
     } catch (error) {
-      console.error('Failed to load report:', error);
-<<<<<<< HEAD
-      this.showError('レポートの読み込みに失敗しました: ' + (error instanceof Error ? error.message : String(error)));
-=======
-      this.showError(
-        'レポートの読み込みに失敗しました: ' +
-          (error instanceof Error ? error.message : String(error))
-      );
->>>>>>> origin/main
+      console.error('Failed to load data:', error);
     }
-  }
-
-  private async generateReport(): Promise<void> {
-    try {
-      const reportContent = document.getElementById('reportContent');
-      if (reportContent) {
-        reportContent.innerHTML = `
-          <div class="loading">
-            <h3>レポートを再生成中...</h3>
-            <p>しばらくお待ちください</p>
-          </div>
-        `;
-      }
-
-      await this.loadReport();
-    } catch (error) {
-      console.error('Failed to generate report:', error);
-      this.showError('レポートの再生成に失敗しました');
-    }
-  }
-
-  private displayReport(): void {
-    const reportContent = document.getElementById('reportContent');
-    if (!reportContent || !this.reportData) return;
-
-    reportContent.innerHTML = this.reportData.report;
   }
 
   private updateStats(): void {
-    if (!this.reportData) {
-      console.log('Report data is null, cannot update stats');
-      return;
-    }
-
-    const stats = this.reportData.stats;
-    console.log('Updating stats with data:', stats);
-<<<<<<< HEAD
+    const stats = this.calculateStats();
     
-=======
-
->>>>>>> origin/main
-    this.updateStatElement('totalEvents', stats.total);
-    this.updateStatElement('clickEvents', stats.click);
-    this.updateStatElement('keyEvents', stats.key);
-    this.updateStatElement('consoleEvents', stats.console);
-    this.updateStatElement('networkEvents', stats.network);
-    this.updateStatElement('networkErrorEvents', stats.networkError);
-    this.updateStatElement('errorEvents', stats.error);
-    this.updateStatElement('screenshotEvents', stats.screenshot);
-    this.updateStatElement('flagEvents', stats.flag);
-
-    // 統計サマリーを表示
-    const statsSummary = document.getElementById('statsSummary');
-    if (statsSummary) {
-      statsSummary.style.display = 'grid';
-    }
-  }
-
-  private updateStatElement(id: string, value: number): void {
-    const element = document.getElementById(id);
-    if (element) {
-      element.textContent = value.toString();
-    }
-  }
-
-  private calculateStats(logs: LogEntry[]): any {
-    return {
-      total: logs.length,
-      click: logs.filter(log => log.type === 'click').length,
-      key: logs.filter(log => log.type === 'keydown').length,
-      console: logs.filter(log => log.type === 'console').length,
-      network: logs.filter(log => log.type === 'network').length,
-      networkError: logs.filter(log => log.type === 'network_error').length,
-<<<<<<< HEAD
-      error: logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
-      screenshot: logs.filter(log => log.type === 'screenshot').length,
-      flag: logs.filter(log => log.type === 'flag').length
-=======
-      error: logs.filter(
-        log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
-      ).length,
-      screenshot: logs.filter(log => log.type === 'screenshot').length,
-      flag: logs.filter(log => log.type === 'flag').length,
->>>>>>> origin/main
-    };
-  }
-
-  private async copyToClipboard(): Promise<void> {
-    if (!this.reportData) {
-      this.showError('コピーするレポートがありません');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(this.reportData.report);
-      this.showCopySuccess();
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
-      this.showError('クリップボードへのコピーに失敗しました');
-    }
-  }
-
-  private downloadReport(): void {
-    if (!this.reportData) {
-      this.showError('ダウンロードするレポートがありません');
-      return;
-    }
-
-    try {
-      const blob = new Blob([this.reportData.report], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `exploratory-test-report-${new Date().toISOString().split('T')[0]}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to download report:', error);
-      this.showError('レポートのダウンロードに失敗しました');
-    }
-  }
-
-  private clearReport(): void {
-    if (confirm('レポートをクリアしますか？')) {
-      const reportContent = document.getElementById('reportContent');
-      if (reportContent) {
-        reportContent.innerHTML = `
-          <div class="loading">
-            <h3>レポートがクリアされました</h3>
-            <p>「レポート再生成」ボタンをクリックして新しいレポートを生成してください</p>
-          </div>
-        `;
-      }
-
-      const statsSummary = document.getElementById('statsSummary');
-      if (statsSummary) {
-        statsSummary.style.display = 'none';
-      }
-
-      this.reportData = null;
-    }
-  }
-
-  private showCopySuccess(): void {
-    const copySuccess = document.getElementById('copySuccess');
-    if (copySuccess) {
-      copySuccess.classList.add('show');
-      setTimeout(() => {
-        copySuccess.classList.remove('show');
-      }, 3000);
-    }
-  }
-
-  private showError(message: string): void {
-    const reportContent = document.getElementById('reportContent');
-    if (reportContent) {
-      reportContent.innerHTML = `
-        <div class="error">
-          <h3>エラーが発生しました</h3>
-          <p>${message}</p>
+    // 統計情報を表示
+    const statsContainer = document.getElementById('statsContainer');
+    if (statsContainer) {
+      statsContainer.innerHTML = `
+        <div class="stat-item">
+          <span class="stat-label">総イベント数:</span>
+          <span class="stat-value">${stats.totalEvents}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">クリック数:</span>
+          <span class="stat-value">${stats.clickCount}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">キー入力数:</span>
+          <span class="stat-value">${stats.keydownCount}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">エラー数:</span>
+          <span class="stat-value">${stats.errorCount}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">ネットワークエラー数:</span>
+          <span class="stat-value">${stats.networkErrorCount}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">スクリーンショット数:</span>
+          <span class="stat-value">${stats.screenshotCount}</span>
         </div>
       `;
     }
   }
+
+  private calculateStats(): any {
+    const stats = {
+      totalEvents: this.logs.length,
+      clickCount: 0,
+      keydownCount: 0,
+      errorCount: 0,
+      networkErrorCount: 0,
+      screenshotCount: 0
+    };
+
+    this.logs.forEach(log => {
+      switch (log.type) {
+        case 'click':
+          stats.clickCount++;
+          break;
+        case 'keydown':
+          stats.keydownCount++;
+          break;
+        case 'error':
+          stats.errorCount++;
+          break;
+        case 'network_error':
+          stats.networkErrorCount++;
+          break;
+        case 'screenshot':
+          stats.screenshotCount++;
+          break;
+      }
+    });
+
+    return stats;
+  }
+
+  private generateReport(): void {
+    const report = this.createMarkdownReport();
+    const reportContainer = document.getElementById('reportContainer');
+    
+    if (reportContainer) {
+      reportContainer.innerHTML = `<pre>${report}</pre>`;
+    }
+  }
+
+  private createMarkdownReport(): string {
+    const stats = this.calculateStats();
+    const sessionInfo = this.sessionData ? {
+      id: this.sessionData.id,
+      status: this.sessionData.status,
+      startTime: new Date(this.sessionData.startTime).toLocaleString(),
+      endTime: this.sessionData.endTime ? new Date(this.sessionData.endTime).toLocaleString() : '進行中'
+    } : null;
+
+    let report = '# 探索的テストレポート\n\n';
+    
+    if (sessionInfo) {
+      report += `## セッション情報\n`;
+      report += `- **セッションID**: ${sessionInfo.id}\n`;
+      report += `- **ステータス**: ${sessionInfo.status}\n`;
+      report += `- **開始時刻**: ${sessionInfo.startTime}\n`;
+      report += `- **終了時刻**: ${sessionInfo.endTime}\n\n`;
+    }
+
+    report += `## 統計情報\n`;
+    report += `- **総イベント数**: ${stats.totalEvents}\n`;
+    report += `- **クリック数**: ${stats.clickCount}\n`;
+    report += `- **キー入力数**: ${stats.keydownCount}\n`;
+    report += `- **エラー数**: ${stats.errorCount}\n`;
+    report += `- **ネットワークエラー数**: ${stats.networkErrorCount}\n`;
+    report += `- **スクリーンショット数**: ${stats.screenshotCount}\n\n`;
+
+    report += `## イベント詳細\n\n`;
+    
+    if (this.logs.length === 0) {
+      report += 'イベントが記録されていません。\n';
+    } else {
+      this.logs.forEach((log, index) => {
+        const timestamp = new Date(log.timestamp).toLocaleString();
+        report += `### ${index + 1}. ${log.type} (${timestamp})\n`;
+        report += `- **メッセージ**: ${log.message}\n`;
+        report += `- **URL**: ${log.url}\n`;
+        if (log.details) {
+          report += `- **詳細**: \`${JSON.stringify(log.details)}\`\n`;
+        }
+        report += '\n';
+      });
+    }
+
+    return report;
+  }
+
+  private exportReport(): void {
+    const report = this.createMarkdownReport();
+    const blob = new Blob([report], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `test_report_${new Date().toISOString().split('T')[0]}.md`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+  }
+
+  private async copyReport(): Promise<void> {
+    const report = this.createMarkdownReport();
+    
+    try {
+      await navigator.clipboard.writeText(report);
+      alert('レポートをクリップボードにコピーしました');
+    } catch (error) {
+      console.error('Failed to copy report:', error);
+      alert('コピーに失敗しました');
+    }
+  }
 }
 
-// レポートビューアを初期化
-const reportViewer = new ReportViewer();
+// レポートジェネレーターを初期化
+document.addEventListener('DOMContentLoaded', () => {
+  new ReportGenerator();
+});

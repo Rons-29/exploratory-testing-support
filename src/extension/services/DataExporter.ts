@@ -135,7 +135,7 @@ export class DataExporter {
    * エクスポート用のデータを準備
    */
   private prepareExportData(session: SessionData, options: ExportOptions): any {
-    const baseData = {
+    const baseData: any = {
       id: session.id,
       status: session.status,
       startTime: session.startTime,
@@ -149,15 +149,15 @@ export class DataExporter {
     };
 
     if (options.includeEvents !== false) {
-      baseData.events = session.events;
+      baseData.events = session.events || [];
     }
 
     if (options.includeLogs !== false) {
-      baseData.logs = session.logs;
+      baseData.logs = session.logs || [];
     }
 
     if (options.includeScreenshots !== false) {
-      baseData.screenshots = session.events
+      baseData.screenshots = (session.events || [])
         .filter(event => event.type === 'screenshot')
         .map(event => event.data);
     }

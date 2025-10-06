@@ -1,105 +1,262 @@
-class FloatingButton {
-  private container: HTMLElement;
-  private mainButton: HTMLElement;
-  private actionButtons: HTMLElement;
-  private minimizeButton: HTMLElement;
-  private isExpanded: boolean = false;
+export class FloatingButton {
+  private button: HTMLElement | null = null;
+  private isVisible: boolean = false;
   private isMinimized: boolean = false;
   private isDragging: boolean = false;
-  private dragStartX: number = 0;
-  private dragStartY: number = 0;
-  private isSessionActive: boolean = false;
+  private dragOffset: { x: number; y: number } = { x: 0, y: 0 };
+  private position: { x: number; y: number } = { x: 20, y: 20 };
 
-  constructor() {
-    this.container = document.getElementById('floatingContainer')!;
-    this.mainButton = document.getElementById('mainButton')!;
-    this.actionButtons = document.getElementById('actionButtons')!;
-    this.minimizeButton = document.getElementById('minimizeButton')!;
-
-    this.initializeEventListeners();
-    this.loadPosition();
-  }
-
-  private initializeEventListeners(): void {
-    // メインボタンのクリック
-    this.mainButton.addEventListener('click', () => {
-      this.toggleSession();
-    });
-
-    // アクションボタンのクリック
-    document.getElementById('screenshotButton')?.addEventListener('click', () => {
-      this.takeScreenshot();
-    });
-
-    document.getElementById('flagButton')?.addEventListener('click', () => {
-      this.flagEvent();
-    });
-
-    document.getElementById('noteButton')?.addEventListener('click', () => {
-      this.addNote();
-    });
-
-    // 最小化ボタン
-<<<<<<< HEAD
-    this.minimizeButton.addEventListener('click', (e) => {
-=======
-    this.minimizeButton.addEventListener('click', e => {
->>>>>>> origin/main
-      e.stopPropagation();
-      this.toggleMinimize();
-    });
-
-    // ドラッグ機能
-<<<<<<< HEAD
-    this.mainButton.addEventListener('mousedown', (e) => {
-      this.startDrag(e);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-=======
-    this.mainButton.addEventListener('mousedown', e => {
-      this.startDrag(e);
-    });
-
-    document.addEventListener('mousemove', e => {
->>>>>>> origin/main
-      this.drag(e);
-    });
-
-    document.addEventListener('mouseup', () => {
-      this.endDrag();
-    });
-
-    // ダブルクリックで最小化
-    this.mainButton.addEventListener('dblclick', () => {
-      this.toggleMinimize();
-    });
-
-    // キーボードショートカット
-<<<<<<< HEAD
-    document.addEventListener('keydown', (e) => {
-=======
-    document.addEventListener('keydown', e => {
->>>>>>> origin/main
-      this.handleKeyboardShortcut(e);
-    });
-  }
-
-  private toggleSession(): void {
-    this.isSessionActive = !this.isSessionActive;
-    this.updateUI();
-<<<<<<< HEAD
+  public create(): void {
+    // 既存のボタンをすべて削除
+    this.destroy();
     
-    // Background Scriptにメッセージ送信
-    chrome.runtime.sendMessage({
-      type: this.isSessionActive ? 'START_SESSION' : 'STOP_SESSION'
-=======
+    // 既存のボタンをチェック
+    const existingButton = document.getElementById('ai-test-partner-floating-button');
+    if (existingButton) {
+      existingButton.remove();
+    }
 
-    // Background Scriptにメッセージ送信
-    chrome.runtime.sendMessage({
-      type: this.isSessionActive ? 'START_SESSION' : 'STOP_SESSION',
->>>>>>> origin/main
+    this.button = document.createElement('div');
+    this.button.id = 'ai-test-partner-floating-button';
+    this.button.className = 'floating-button';
+    this.button.innerHTML = `
+      <div class="floating-button-main">
+        <div class="floating-button-icon">🎯</div>
+        <div class="floating-button-text">テスト</div>
+      </div>
+      <div class="floating-button-menu" style="display: none;">
+        <button class="floating-menu-item" data-action="screenshot">📷 スクリーンショット</button>
+        <button class="floating-menu-item" data-action="flag">🚩 フラグ</button>
+        <button class="floating-menu-item" data-action="minimize">➖ 最小化</button>
+        <button class="floating-menu-item" data-action="close">❌ 閉じる</button>
+      </div>
+    `;
+
+    this.setupStyles();
+    this.setupEventListeners();
+    this.updatePosition();
+    
+    document.body.appendChild(this.button);
+    this.isVisible = true;
+  }
+
+  public destroy(): void {
+    // すべてのフローティングボタンを削除
+    const allButtons = document.querySelectorAll('#ai-test-partner-floating-button');
+    allButtons.forEach(button => button.remove());
+    
+    // グローバルイベントリスナーを削除（最後のボタンの場合のみ）
+    if (allButtons.length <= 1) {
+      document.removeEventListener('mousemove', this.handleDrag);
+      document.removeEventListener('mouseup', this.endDrag);
+      document.removeEventListener('click', this.hideMenu);
+      FloatingButton.globalListenersSetup = false;
+    }
+    
+    this.button = null;
+    this.isVisible = false;
+  }
+
+  public updateStatus(status: 'active' | 'inactive'): void {
+    if (!this.button) return;
+    
+    const mainButton = this.button.querySelector('.floating-button-main') as HTMLElement;
+    if (mainButton) {
+      mainButton.className = `floating-button-main ${status}`;
+    }
+  }
+
+  public updateSessionStatus(isActive: boolean): void {
+    this.updateStatus(isActive ? 'active' : 'inactive');
+  }
+
+  private setupStyles(): void {
+    if (!this.button) return;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .floating-button {
+        position: fixed;
+        z-index: 10000;
+        cursor: move;
+        user-select: none;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .floating-button-main {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 25px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 80px;
+        cursor: pointer;
+      }
+
+      .floating-button-main:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .floating-button-main.active {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        animation: pulse 2s infinite;
+      }
+
+      .floating-button-main.inactive {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      }
+
+      .floating-button-icon {
+        font-size: 16px;
+      }
+
+      .floating-button-text {
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .floating-button-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        margin-top: 8px;
+        min-width: 180px;
+        overflow: hidden;
+        z-index: 10001;
+      }
+
+      .floating-menu-item {
+        display: block;
+        width: 100%;
+        padding: 12px 16px;
+        border: none;
+        background: white;
+        color: #333;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      .floating-menu-item:hover {
+        background: #f5f5f5;
+      }
+
+      .floating-menu-item:active {
+        background: #e0e0e0;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+
+      .floating-button.minimized .floating-button-main {
+        padding: 8px;
+        min-width: 40px;
+      }
+
+      .floating-button.minimized .floating-button-text {
+        display: none;
+      }
+
+      .floating-button.minimized .floating-button-icon {
+        font-size: 20px;
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  private setupEventListeners(): void {
+    if (!this.button) return;
+
+    const mainButton = this.button.querySelector('.floating-button-main') as HTMLElement;
+    const menuItems = this.button.querySelectorAll('.floating-menu-item');
+
+    // メインボタンクリック
+    mainButton.addEventListener('click', e => {
+      e.stopPropagation();
+      this.toggleMenu();
     });
+
+    // メニューアイテムクリック
+    menuItems.forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        const action = (item as HTMLElement).dataset.action;
+        this.handleMenuAction(action);
+        this.hideMenu();
+      });
+    });
+
+    // ドラッグ機能（このボタン専用）
+    mainButton.addEventListener('mousedown', e => {
+      this.startDrag(e);
+    });
+
+    // グローバルイベントは一度だけ登録（重複防止）
+    this.setupGlobalEventListeners();
+  }
+
+  private static globalListenersSetup = false;
+
+  private setupGlobalEventListeners(): void {
+    if (FloatingButton.globalListenersSetup) return;
+    
+    document.addEventListener('mousemove', this.handleDrag);
+    document.addEventListener('mouseup', this.endDrag);
+    document.addEventListener('click', this.hideMenu);
+    
+    FloatingButton.globalListenersSetup = true;
+  }
+
+  private toggleMenu(): void {
+    if (!this.button) return;
+    
+    const menu = this.button.querySelector('.floating-button-menu') as HTMLElement;
+    if (menu) {
+      const isVisible = menu.style.display !== 'none';
+      menu.style.display = isVisible ? 'none' : 'block';
+    }
+  }
+
+  private hideMenu = (): void => {
+    if (!this.button) return;
+    
+    const menu = this.button.querySelector('.floating-button-menu') as HTMLElement;
+    if (menu) {
+      menu.style.display = 'none';
+    }
+  }
+
+  private handleMenuAction(action: string | undefined): void {
+    switch (action) {
+      case 'screenshot':
+        this.takeScreenshot();
+        break;
+      case 'flag':
+        this.flagEvent();
+        break;
+      case 'minimize':
+        this.toggleMinimize();
+        break;
+      case 'close':
+        this.close();
+        break;
+    }
   }
 
   private takeScreenshot(): void {
@@ -110,213 +267,44 @@ class FloatingButton {
     chrome.runtime.sendMessage({ type: 'FLAG_CURRENT_EVENT' });
   }
 
-  private addNote(): void {
-    const note = prompt('メモを入力してください:');
-    if (note) {
-      chrome.runtime.sendMessage({
-        type: 'ADD_NOTE',
-<<<<<<< HEAD
-        note: note
-=======
-        note: note,
->>>>>>> origin/main
-      });
-    }
-  }
-
   private toggleMinimize(): void {
+    if (!this.button) return;
+    
     this.isMinimized = !this.isMinimized;
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> origin/main
-    if (this.isMinimized) {
-      this.container.style.display = 'none';
-      this.createMinimizedButton();
-    } else {
-      this.container.style.display = 'flex';
-      this.removeMinimizedButton();
-    }
+    this.button.classList.toggle('minimized', this.isMinimized);
   }
 
-  private createMinimizedButton(): void {
-    const minimized = document.createElement('div');
-    minimized.className = 'minimized';
-    minimized.id = 'minimizedButton';
-    minimized.innerHTML = '<div class="icon">テスト</div>';
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> origin/main
-    minimized.addEventListener('click', () => {
-      this.toggleMinimize();
-    });
-
-    document.body.appendChild(minimized);
-  }
-
-  private removeMinimizedButton(): void {
-    const minimized = document.getElementById('minimizedButton');
-    if (minimized) {
-      minimized.remove();
-    }
+  private close(): void {
+    this.destroy();
   }
 
   private startDrag(e: MouseEvent): void {
     this.isDragging = true;
-    this.dragStartX = e.clientX - this.container.offsetLeft;
-    this.dragStartY = e.clientY - this.container.offsetTop;
-<<<<<<< HEAD
+    this.dragOffset = {
+      x: e.clientX - this.position.x,
+      y: e.clientY - this.position.y
+    };
+  }
+
+  private handleDrag = (e: MouseEvent): void => {
+    if (!this.isDragging || !this.button) return;
     
-=======
-
->>>>>>> origin/main
-    this.container.classList.add('dragging');
-    e.preventDefault();
+    this.position = {
+      x: e.clientX - this.dragOffset.x,
+      y: e.clientY - this.dragOffset.y
+    };
+    
+    this.updatePosition();
   }
 
-  private drag(e: MouseEvent): void {
-    if (!this.isDragging) return;
-
-    const x = e.clientX - this.dragStartX;
-    const y = e.clientY - this.dragStartY;
-
-    // 画面内に制限
-    const maxX = window.innerWidth - this.container.offsetWidth;
-    const maxY = window.innerHeight - this.container.offsetHeight;
-
-    const clampedX = Math.max(0, Math.min(x, maxX));
-    const clampedY = Math.max(0, Math.min(y, maxY));
-
-    this.container.style.left = clampedX + 'px';
-    this.container.style.top = clampedY + 'px';
-    this.container.style.right = 'auto';
-    this.container.style.bottom = 'auto';
-  }
-
-  private endDrag(): void {
-    if (!this.isDragging) return;
-
+  private endDrag = (): void => {
     this.isDragging = false;
-    this.container.classList.remove('dragging');
-    this.savePosition();
   }
 
-  private savePosition(): void {
-    const rect = this.container.getBoundingClientRect();
-    const position = {
-      x: rect.left,
-      y: rect.top,
-<<<<<<< HEAD
-      isMinimized: this.isMinimized
-    };
+  private updatePosition(): void {
+    if (!this.button) return;
     
-=======
-      isMinimized: this.isMinimized,
-    };
-
->>>>>>> origin/main
-    chrome.storage.local.set({ floatingButtonPosition: position });
-  }
-
-  private loadPosition(): void {
-<<<<<<< HEAD
-    chrome.storage.local.get('floatingButtonPosition', (result) => {
-=======
-    chrome.storage.local.get('floatingButtonPosition', result => {
->>>>>>> origin/main
-      if (result.floatingButtonPosition) {
-        const pos = result.floatingButtonPosition;
-        this.container.style.left = pos.x + 'px';
-        this.container.style.top = pos.y + 'px';
-        this.container.style.right = 'auto';
-        this.container.style.bottom = 'auto';
-<<<<<<< HEAD
-        
-=======
-
->>>>>>> origin/main
-        if (pos.isMinimized) {
-          this.toggleMinimize();
-        }
-      }
-    });
-  }
-
-  private handleKeyboardShortcut(e: KeyboardEvent): void {
-    // Ctrl+Shift+T: テスト開始/終了
-    if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-      e.preventDefault();
-      this.toggleSession();
-    }
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> origin/main
-    // Ctrl+Shift+F: フラグ
-    if (e.ctrlKey && e.shiftKey && e.key === 'F') {
-      e.preventDefault();
-      this.flagEvent();
-    }
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> origin/main
-    // Ctrl+Shift+S: スクリーンショット
-    if (e.ctrlKey && e.shiftKey && e.key === 'S') {
-      e.preventDefault();
-      this.takeScreenshot();
-    }
-  }
-
-  private updateUI(): void {
-    const icon = this.mainButton.querySelector('.icon') as HTMLElement;
-    const status = this.mainButton.querySelector('.status') as HTMLElement;
-
-    if (this.isSessionActive) {
-      this.mainButton.classList.add('active');
-      icon.textContent = '⏹';
-      status.textContent = 'テスト停止';
-      this.expandActions();
-    } else {
-      this.mainButton.classList.remove('active');
-      icon.textContent = '▶';
-      status.textContent = 'テスト開始';
-      this.collapseActions();
-    }
-  }
-
-  private expandActions(): void {
-    this.isExpanded = true;
-    this.container.classList.add('expanded');
-  }
-
-  private collapseActions(): void {
-    this.isExpanded = false;
-    this.container.classList.remove('expanded');
-  }
-
-  public updateStatus(isActive: boolean): void {
-    this.isSessionActive = isActive;
-    this.updateUI();
+    this.button.style.left = `${this.position.x}px`;
+    this.button.style.top = `${this.position.y}px`;
   }
 }
-
-// フローティングボタンを初期化
-const floatingButton = new FloatingButton();
-
-// Background Scriptからのメッセージを受信
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  switch (message.type) {
-    case 'SESSION_STARTED':
-      floatingButton.updateStatus(true);
-      break;
-    case 'SESSION_STOPPED':
-      floatingButton.updateStatus(false);
-      break;
-  }
-});

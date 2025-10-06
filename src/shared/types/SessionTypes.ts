@@ -12,9 +12,16 @@ export interface SessionData {
   status: SessionStatus;
   startTime: Date;
   endTime: Date | null;
+  duration?: number;
+  url?: string;
+  title?: string;
+  userAgent?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
   events: any[];
   screenshots: any[];
   flags: any[];
+  logs?: any[];
   metadata: SessionMetadata;
 }
 

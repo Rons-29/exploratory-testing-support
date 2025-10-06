@@ -65,7 +65,7 @@ export class ScreenshotCapture {
     return new Promise((resolve, reject) => {
       try {
         // 現在のタブのスクリーンショットを取得
-        chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
+        chrome.tabs.captureVisibleTab(undefined as any, { format: 'png' }, (dataUrl) => {
           if (chrome.runtime.lastError) {
             reject(new Error(chrome.runtime.lastError.message));
             return;

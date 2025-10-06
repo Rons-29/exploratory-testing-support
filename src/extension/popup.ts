@@ -1,9 +1,13 @@
 import { SessionManager } from './services/SessionManager';
 import { ApiClient } from './services/ApiClient';
+import { ScreenshotCapture } from './services/ScreenshotCapture';
+import { DataExporter } from './services/DataExporter';
 
 class PopupController {
   private sessionManager: SessionManager;
   private apiClient: ApiClient;
+  private screenshotCapture: ScreenshotCapture;
+  private dataExporter: DataExporter;
   private isSessionActive: boolean = false;
   private sessionId: string | null = null;
   private sessionStartTime: Date | null = null;
@@ -13,6 +17,8 @@ class PopupController {
   constructor() {
     this.sessionManager = new SessionManager();
     this.apiClient = new ApiClient();
+    this.screenshotCapture = new ScreenshotCapture();
+    this.dataExporter = new DataExporter();
   }
 
   // デストラクタでタイマーをクリーンアップ
@@ -55,6 +61,14 @@ class PopupController {
     // レポート表示ボタン
     const reportButton = document.getElementById('viewReport');
     reportButton?.addEventListener('click', () => this.viewReport());
+
+    // データエクスポートボタン
+    const dataExportButton = document.getElementById('exportData');
+    dataExportButton?.addEventListener('click', () => this.exportData());
+
+    // Webアプリ送信ボタン
+    const webAppButton = document.getElementById('sendToWebApp');
+    webAppButton?.addEventListener('click', () => this.sendToWebApp());
 
     // 設定ボタン
     const settingsButton = document.getElementById('openSettings');
@@ -184,13 +198,13 @@ class PopupController {
 
   private async takeScreenshot(): Promise<void> {
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'TAKE_SCREENSHOT' });
-      if (response && response.success) {
-        this.showNotification('スクリーンショットを撮影しました', 'success');
-        this.updateStats();
-      } else {
-        this.showNotification('スクリーンショットの撮影に失敗しました', 'error');
-      }
+      // ScreenshotCaptureを使用してスクリーンショットを撮影
+      const screenshot = await this.screenshotCapture.captureManual('手動スクリーンショット');
+      this.showNotification('スクリーンショットを撮影しました', 'success');
+      this.updateStats();
+      
+      // オプション：スクリーンショットをダウンロード
+      await this.screenshotCapture.downloadScreenshot(screenshot);
     } catch (error) {
       console.error('Failed to take screenshot:', error);
       this.showNotification('スクリーンショットの撮影に失敗しました', 'error');
@@ -221,6 +235,77 @@ class PopupController {
       console.error('Failed to export report:', error);
       this.showNotification('レポートの出力に失敗しました', 'error');
     }
+  }
+
+  private async exportData(): Promise<void> {
+    try {
+      if (!this.sessionId) {
+        this.showNotification('アクティブなセッションがありません', 'error');
+        return;
+      }
+
+      // エクスポート形式を選択
+      const format = await this.selectExportFormat();
+      if (!format) return;
+
+      // データをエクスポート
+      switch (format) {
+        case 'json':
+          await this.dataExporter.exportAsJSON(this.sessionId);
+          this.showNotification('JSON形式でエクスポートしました', 'success');
+          break;
+        case 'csv':
+          await this.dataExporter.exportAsCSV(this.sessionId);
+          this.showNotification('CSV形式でエクスポートしました', 'success');
+          break;
+        case 'markdown':
+          await this.dataExporter.exportAsMarkdown(this.sessionId);
+          this.showNotification('Markdown形式でエクスポートしました', 'success');
+          break;
+      }
+    } catch (error) {
+      console.error('Failed to export data:', error);
+      this.showNotification('データのエクスポートに失敗しました', 'error');
+    }
+  }
+
+  private async sendToWebApp(): Promise<void> {
+    try {
+      if (!this.sessionId) {
+        this.showNotification('アクティブなセッションがありません', 'error');
+        return;
+      }
+
+      const success = await this.dataExporter.sendCurrentSessionToWebApp();
+      if (success) {
+        this.showNotification('Webアプリにデータを送信しました', 'success');
+      } else {
+        this.showNotification('Webアプリへの送信に失敗しました', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to send to Web app:', error);
+      this.showNotification('Webアプリへの送信に失敗しました', 'error');
+    }
+  }
+
+  private async selectExportFormat(): Promise<string | null> {
+    return new Promise((resolve) => {
+      const format = prompt('エクスポート形式を選択してください:\n1. JSON\n2. CSV\n3. Markdown\n\n番号を入力してください (1-3):');
+      
+      switch (format) {
+        case '1':
+          resolve('json');
+          break;
+        case '2':
+          resolve('csv');
+          break;
+        case '3':
+          resolve('markdown');
+          break;
+        default:
+          resolve(null);
+      }
+    });
   }
 
   private openSettings(): void {

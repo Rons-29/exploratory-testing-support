@@ -280,9 +280,11 @@ export class SessionManager {
         const sessionData = result[this.sessionStorageKey];
         console.log('SessionManager: Found old session data:', sessionData);
         
-        // 古いセッションがACTIVE状態の場合は停止状態に変更
+        // 古いセッションがACTIVE状態の場合は保持（削除しない）
         if (sessionData.status === SessionStatus.ACTIVE) {
-          console.log('SessionManager: Clearing active session from storage');
+          console.log('SessionManager: Keeping active session in storage');
+        } else {
+          console.log('SessionManager: Clearing inactive session from storage');
           await chrome.storage.local.remove(this.sessionStorageKey);
         }
       }

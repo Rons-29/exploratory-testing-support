@@ -70,15 +70,24 @@ class PopupController {
 
   private async loadSessionStatus(): Promise<void> {
     try {
-      console.log('Loading session status...');
-      
       // バックグラウンドスクリプトから実際の状態を取得
       const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
-      console.log('Session status response:', response);
       if (response && response.success) {
         this.isSessionActive = response.isActive;
         this.sessionId = response.sessionData?.id || null;
-        this.sessionStartTime = response.sessionData?.startTime || null;
+        
+        // sessionStartTimeを正しくDateオブジェクトに変換
+        if (response.sessionData?.startTime) {
+          if (typeof response.sessionData.startTime === 'string') {
+            this.sessionStartTime = new Date(response.sessionData.startTime);
+          } else if (response.sessionData.startTime instanceof Date) {
+            this.sessionStartTime = response.sessionData.startTime;
+          } else {
+            this.sessionStartTime = null;
+          }
+        } else {
+          this.sessionStartTime = null;
+        }
         
         // セッションがアクティブな場合はタイマーを開始
         if (this.isSessionActive && this.sessionStartTime) {
@@ -86,13 +95,7 @@ class PopupController {
         }
         
         this.updateUI();
-        console.log('Session status loaded successfully:', {
-          isActive: this.isSessionActive,
-          sessionId: this.sessionId,
-          startTime: this.sessionStartTime
-        });
       } else {
-        console.log('No active session or invalid response');
         // セッションが存在しない場合のみ「停止中」に設定
         this.isSessionActive = false;
         this.sessionId = null;
@@ -100,9 +103,7 @@ class PopupController {
         this.updateUI();
       }
     } catch (error) {
-      console.error('Failed to load session status:', error);
       // エラー時は既存の状態を保持（リセットしない）
-      console.log('Keeping existing state due to error');
     }
   }
 

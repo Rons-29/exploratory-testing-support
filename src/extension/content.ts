@@ -23,8 +23,6 @@ class ContentScript {
   }
 
   public async initialize(): Promise<void> {
-    console.log('探索的テスト支援: Content script initialized');
-
     // 初期化時にセッション状態を確認
     await this.checkSessionStatus();
 
@@ -48,6 +46,7 @@ class ContentScript {
         const status = newSession?.status;
         const isActive = status === 'active' || status === 'ACTIVE';
         this.isSessionActive = Boolean(isActive);
+        
         try {
           if (this.isSessionActive) {
             // セッションがアクティブな場合のみフローティングボタンを表示
@@ -65,35 +64,14 @@ class ContentScript {
   }
 
   private async checkSessionStatus(): Promise<void> {
+    // メッセージ送信を無効化してストレージベースに変更（エラーの原因）
     try {
-      console.log('Content Script: Checking session status via message...');
-      const response = await chrome.runtime.sendMessage({ type: 'GET_SESSION_STATUS' });
-      console.log('Content Script: GET_SESSION_STATUS response:', response);
-      if (response && response.success) {
-        this.isSessionActive = response.isActive;
-        console.log('Content Script: Session status checked via message:', this.isSessionActive);
-        if (this.isSessionActive) {
-          // セッションがアクティブな場合のみフローティングボタンを表示
-          this.floatingButton.create();
-          this.floatingButton.updateStatus('active');
-        } else {
-          // セッションが非アクティブな場合はフローティングボタンを非表示
-          this.floatingButton.destroy();
-        }
-        return;
-      }
-    } catch (error) {
-      console.error('Content Script: Failed to check session status via message:', error);
-    }
-    // フォールバック: 直接ストレージからセッションを確認
-    try {
-      console.log('Content Script: Checking session status via storage...');
       const result = await chrome.storage.local.get('current_session');
-      console.log('Content Script: Storage result:', result);
       const session = (result as any).current_session;
       const status = session?.status;
       const isActive = status === 'active' || status === 'ACTIVE';
       this.isSessionActive = Boolean(isActive);
+      
       if (this.isSessionActive) {
         // セッションがアクティブな場合のみフローティングボタンを表示
         this.floatingButton.create();
@@ -102,14 +80,10 @@ class ContentScript {
         // セッションが非アクティブな場合はフローティングボタンを非表示
         this.floatingButton.destroy();
       }
-      console.log(
-        'Content Script: Fallback session status =',
-        this.isSessionActive,
-        'status =',
-        status
-      );
     } catch (e) {
-      console.error('Content Script: Fallback session status check failed:', e);
+      // エラー時は非アクティブ状態として扱う
+      this.isSessionActive = false;
+      this.floatingButton.destroy();
     }
   }
 

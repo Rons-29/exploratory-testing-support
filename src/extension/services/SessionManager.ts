@@ -5,10 +5,9 @@ export class SessionManager {
   private sessionStorageKey = 'current_session';
 
   constructor() {
-    // 非同期でセッションを読み込み
-    this.loadSessionFromStorage().catch(error => {
-      console.error('Failed to initialize session manager:', error);
-    });
+    // 初期化時はセッションをクリアして確実に停止状態から開始
+    this.currentSession = null;
+    console.log('SessionManager: Initialized with no active session');
   }
 
   public async startSession(name?: string, description?: string): Promise<string> {
@@ -117,6 +116,34 @@ export class SessionManager {
     return this.currentSession;
   }
 
+  public async getSession(sessionId: string): Promise<SessionData | null> {
+    if (this.currentSession && this.currentSession.id === sessionId) {
+      return this.currentSession;
+    }
+    
+    // ストレージからセッションを取得
+    try {
+      const result = await chrome.storage.local.get(sessionId);
+      return result[sessionId] || null;
+    } catch (error) {
+      console.error('Failed to get session:', error);
+      return null;
+    }
+  }
+
+  public async addLog(logData: any): Promise<void> {
+    if (!this.currentSession) return;
+    
+    this.currentSession.events.push({
+      id: logData.id,
+      type: 'log',
+      timestamp: logData.timestamp,
+      data: logData
+    });
+    
+    await this.saveSessionToStorage();
+  }
+
   public async addEvent(event: any): Promise<void> {
     // ストレージから最新の状態を読み込み
     await this.loadSessionFromStorage();
@@ -214,6 +241,12 @@ export class SessionManager {
 
   private async loadSessionFromStorage(): Promise<void> {
     try {
+      // 拡張機能のコンテキストが有効かチェック
+      if (!chrome.runtime?.id) {
+        console.log('SessionManager: Extension context invalidated, skipping storage load');
+        return;
+      }
+
       const result = await chrome.storage.local.get(this.sessionStorageKey);
       if (result[this.sessionStorageKey]) {
         const sessionData = result[this.sessionStorageKey];
@@ -243,7 +276,12 @@ export class SessionManager {
         console.log('SessionManager: Session loaded from storage:', this.currentSession);
       }
     } catch (error) {
-      console.error('Failed to load session from storage:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Extension context invalidated')) {
+        console.log('SessionManager: Extension context invalidated, skipping storage load');
+      } else {
+        console.error('Failed to load session from storage:', error);
+      }
     }
   }
 
@@ -264,30 +302,26 @@ export class SessionManager {
   }
 
   private notifySessionStarted(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_STARTED',
-      sessionId: this.currentSession?.id
-    });
+    // メッセージパッシングを無効化（エラーの原因）
+    // 代わりにchrome.storage.onChangedを使用してContent Scriptと同期
+    console.log('SessionManager: Session started notification disabled (using storage sync)');
   }
 
   private notifySessionStopped(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_STOPPED',
-      sessionId: this.currentSession?.id
-    });
+    // メッセージパッシングを無効化（エラーの原因）
+    // 代わりにchrome.storage.onChangedを使用してContent Scriptと同期
+    console.log('SessionManager: Session stopped notification disabled (using storage sync)');
   }
 
   private notifySessionPaused(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_PAUSED',
-      sessionId: this.currentSession?.id
-    });
+    // メッセージパッシングを無効化（エラーの原因）
+    // 代わりにchrome.storage.onChangedを使用してContent Scriptと同期
+    console.log('SessionManager: Session paused notification disabled (using storage sync)');
   }
 
   private notifySessionResumed(): void {
-    chrome.runtime.sendMessage({
-      type: 'SESSION_RESUMED',
-      sessionId: this.currentSession?.id
-    });
+    // メッセージパッシングを無効化（エラーの原因）
+    // 代わりにchrome.storage.onChangedを使用してContent Scriptと同期
+    console.log('SessionManager: Session resumed notification disabled (using storage sync)');
   }
 }

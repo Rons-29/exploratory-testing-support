@@ -18,8 +18,8 @@ export class ApiClient {
   private retryDelay: number = 1000; // 1秒
 
   constructor() {
-    // Chrome拡張機能では環境変数が利用できないため、定数を使用
-    this.baseUrl = 'http://localhost:3001/api';
+    // Webアプリが起動している場合はAPI接続を有効化
+    this.baseUrl = 'http://localhost:3001';
     this.loadAccessToken();
     this.processQueue(); // 起動時にキューを処理
   }
@@ -53,6 +53,15 @@ export class ApiClient {
   }
 
   public async saveSession(sessionData: SessionData): Promise<ApiResponse<any>> {
+    // API接続が無効化されている場合はローカルストレージに保存
+    if (!this.baseUrl) {
+      console.log('ApiClient: API disabled, saving session locally');
+      await chrome.storage.local.set({ 
+        [`session_${sessionData.id}`]: sessionData 
+      });
+      return { success: true, data: sessionData };
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };

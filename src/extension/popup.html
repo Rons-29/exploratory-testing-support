@@ -19,7 +19,7 @@
       <h3 class="status-title">ステータス</h3>
       <div id="statusIndicator" class="status-indicator">
         <span class="status-dot inactive"></span>
-        <span class="status-text">停止中</span>
+        <span id="sessionStatus" class="status-text">停止中</span>
       </div>
     </div>
 
@@ -30,7 +30,7 @@
         <span class="btn-text">テスト開始</span>
       </button>
       
-      <div class="session-info" id="sessionInfo" style="display: none;">
+      <div class="session-info" id="sessionInfo">
         <p>セッションID: <span id="sessionId">-</span></p>
         <p>経過時間: <span id="sessionDuration">00:00:00</span></p>
       </div>
@@ -61,6 +61,16 @@
           <span class="menu-text">レポート表示</span>
         </a>
         
+        <a href="#" id="exportData" class="menu-item">
+          <span class="menu-icon">💾</span>
+          <span class="menu-text">データエクスポート</span>
+        </a>
+        
+        <a href="#" id="sendToWebApp" class="menu-item">
+          <span class="menu-icon">🌐</span>
+          <span class="menu-text">Webアプリ送信</span>
+        </a>
+        
         <a href="#" id="mcpAnalyze" class="menu-item">
           <span class="menu-icon">🤖</span>
           <span class="menu-text">AI分析</span>
@@ -69,6 +79,11 @@
         <a href="#" id="mcpSnapshot" class="menu-item">
           <span class="menu-icon">📸</span>
           <span class="menu-text">MCPスナップショット</span>
+        </a>
+        
+        <a href="#" id="clearSession" class="menu-item menu-item-danger">
+          <span class="menu-icon">🗑️</span>
+          <span class="menu-text">セッションクリア</span>
         </a>
       </div>
     </div>

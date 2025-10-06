@@ -1,88 +1,48 @@
-interface LogEntry {
-  id: string;
-  type: string;
-  message: string;
-  timestamp: number;
-  details?: any;
-  element?: string;
-  url?: string;
-  level?: string;
-}
-
 class LogViewer {
-  private logs: LogEntry[] = [];
-  private filteredLogs: LogEntry[] = [];
-  private currentFilter = 'all';
-  private currentSearch = '';
+  private logs: any[] = [];
+  private filteredLogs: any[] = [];
+  private currentFilter: string = 'all';
+  private currentSearch: string = '';
 
   constructor() {
     this.initializeEventListeners();
     this.loadLogs();
-
-    // test_logs 変更で自動更新
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== 'local') return;
-      if (Object.prototype.hasOwnProperty.call(changes, 'test_logs')) {
-        this.loadLogs();
-      }
-    });
   }
 
   private initializeEventListeners(): void {
     // フィルター変更
     const typeFilter = document.getElementById('typeFilter') as HTMLSelectElement;
-<<<<<<< HEAD
-    typeFilter.addEventListener('change', (e) => {
-=======
     typeFilter.addEventListener('change', e => {
->>>>>>> origin/main
       this.currentFilter = (e.target as HTMLSelectElement).value;
       this.applyFilters();
     });
 
     // 検索入力
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
-<<<<<<< HEAD
-    searchInput.addEventListener('input', (e) => {
-=======
     searchInput.addEventListener('input', e => {
->>>>>>> origin/main
       this.currentSearch = (e.target as HTMLInputElement).value.toLowerCase();
       this.applyFilters();
     });
 
-    // 更新ボタン
-    const refreshBtn = document.getElementById('refreshBtn');
-    refreshBtn?.addEventListener('click', () => {
-      this.loadLogs();
-    });
-
     // クリアボタン
-    const clearBtn = document.getElementById('clearBtn');
-    clearBtn?.addEventListener('click', () => {
-      this.clearLogs();
-    });
+    const clearButton = document.getElementById('clearLogs');
+    clearButton?.addEventListener('click', () => this.clearLogs());
+
+    // エクスポートボタン
+    const exportButton = document.getElementById('exportLogs');
+    exportButton?.addEventListener('click', () => this.exportLogs());
+
+    // 自動更新
+    setInterval(() => this.loadLogs(), 5000);
   }
 
   private async loadLogs(): Promise<void> {
     try {
-      // Background Scriptからログを取得
-      const response = await chrome.runtime.sendMessage({ type: 'GET_LOGS' });
-<<<<<<< HEAD
-      
-=======
-
->>>>>>> origin/main
-      if (response && response.success) {
-        this.logs = response.logs || [];
-        this.applyFilters();
-        this.updateStats();
-      } else {
-        this.showError('ログの取得に失敗しました');
-      }
+      const result = await chrome.storage.local.get('test_logs');
+      this.logs = result.test_logs || [];
+      this.applyFilters();
     } catch (error) {
       console.error('Failed to load logs:', error);
-      this.showError('ログの取得中にエラーが発生しました');
     }
   }
 
@@ -95,7 +55,7 @@ class LogViewer {
 
       // 検索フィルター
       if (this.currentSearch) {
-        const searchText = `${log.message} ${log.details || ''} ${log.element || ''}`.toLowerCase();
+        const searchText = JSON.stringify(log).toLowerCase();
         if (!searchText.includes(this.currentSearch)) {
           return false;
         }
@@ -108,182 +68,73 @@ class LogViewer {
   }
 
   private renderLogs(): void {
-    const logsContent = document.getElementById('logsContent');
-    const logCount = document.getElementById('logCount');
-
-    if (!logsContent || !logCount) return;
-
-    logCount.textContent = `${this.filteredLogs.length}件`;
+    const container = document.getElementById('logContainer');
+    if (!container) return;
 
     if (this.filteredLogs.length === 0) {
-      logsContent.innerHTML = `
-        <div class="empty-state">
-          <h3>ログが見つかりません</h3>
-          <p>フィルターを調整するか、セッションを開始してください</p>
-        </div>
-      `;
+      container.innerHTML = '<div class="no-logs">ログがありません</div>';
       return;
     }
 
-    const logsHTML = this.filteredLogs.map(log => this.createLogEntryHTML(log)).join('');
-    logsContent.innerHTML = logsHTML;
+    const html = this.filteredLogs.map(log => this.createLogElement(log)).join('');
+    container.innerHTML = html;
   }
 
-  private createLogEntryHTML(log: LogEntry): string {
-    const timestamp = new Date(log.timestamp).toLocaleString('ja-JP');
-    const typeClass = this.getTypeClass(log.type);
-    const details = log.details ? JSON.stringify(log.details, null, 2) : '';
-
-    // ネットワークログの特別な表示
-    let networkDetails = '';
-    if (log.type === 'network' && log.details) {
-      const { method, status, statusText, duration, mimeType, encodedDataLength } = log.details;
-      networkDetails = `
-        <div class="log-details">
-          <strong>${method}</strong> ${status} ${statusText}
-          ${duration ? ` (${duration}ms)` : ''}
-          ${mimeType ? ` | ${mimeType}` : ''}
-          ${encodedDataLength ? ` | ${encodedDataLength} bytes` : ''}
-        </div>
-      `;
-    }
+  private createLogElement(log: any): string {
+    const timestamp = new Date(log.timestamp).toLocaleString();
+    const level = log.details?.level || 'info';
+    const levelClass = this.getLevelClass(level);
 
     return `
-      <div class="log-entry">
-        <div class="log-timestamp">${timestamp}</div>
-        <div class="log-type ${typeClass}">${this.getTypeLabel(log.type)}</div>
-        <div class="log-message">
-          ${this.escapeHtml(log.message)}
-          ${log.element ? `<div class="log-details">要素: ${this.escapeHtml(log.element)}</div>` : ''}
-          ${log.url ? `<div class="log-details">URL: ${this.escapeHtml(log.url)}</div>` : ''}
-          ${log.level ? `<div class="log-details">レベル: ${this.escapeHtml(log.level)}</div>` : ''}
-          ${networkDetails}
-          ${details && log.type !== 'network' ? `<div class="log-details"><pre>${this.escapeHtml(details)}</pre></div>` : ''}
+      <div class="log-entry ${levelClass}" data-type="${log.type}">
+        <div class="log-header">
+          <span class="log-timestamp">${timestamp}</span>
+          <span class="log-type">${log.type}</span>
+          <span class="log-level">${level}</span>
         </div>
+        <div class="log-message">${log.message}</div>
+        ${log.details ? `<div class="log-details">${JSON.stringify(log.details, null, 2)}</div>` : ''}
+        <div class="log-url">${log.url}</div>
       </div>
     `;
   }
 
-  private getTypeClass(type: string): string {
-    const typeMap: { [key: string]: string } = {
-<<<<<<< HEAD
-      'click': 'click',
-      'keydown': 'keydown',
-      'error': 'error',
-      'console': 'console',
-      'network': 'network',
-      'network_error': 'network_error',
-      'screenshot': 'screenshot',
-      'flag': 'flag'
-=======
-      click: 'click',
-      keydown: 'keydown',
-      error: 'error',
-      console: 'console',
-      network: 'network',
-      network_error: 'network_error',
-      screenshot: 'screenshot',
-      flag: 'flag',
->>>>>>> origin/main
-    };
-    return typeMap[type] || 'console';
-  }
-
-  private getTypeLabel(type: string): string {
-    const labelMap: { [key: string]: string } = {
-<<<<<<< HEAD
-      'click': 'クリック',
-      'keydown': 'キー',
-      'error': 'エラー',
-      'console': 'コンソール',
-      'network': 'ネットワーク',
-      'network_error': 'ネットワークエラー',
-      'screenshot': 'スクリーンショット',
-      'flag': 'フラグ'
-=======
-      click: 'クリック',
-      keydown: 'キー',
-      error: 'エラー',
-      console: 'コンソール',
-      network: 'ネットワーク',
-      network_error: 'ネットワークエラー',
-      screenshot: 'スクリーンショット',
-      flag: 'フラグ',
->>>>>>> origin/main
-    };
-    return labelMap[type] || type;
-  }
-
-  private updateStats(): void {
-    const stats = {
-      total: this.logs.length,
-      click: this.logs.filter(log => log.type === 'click').length,
-      key: this.logs.filter(log => log.type === 'keydown').length,
-      console: this.logs.filter(log => log.type === 'console').length,
-      network: this.logs.filter(log => log.type === 'network').length,
-      networkError: this.logs.filter(log => log.type === 'network_error').length,
-<<<<<<< HEAD
-      error: this.logs.filter(log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')).length,
-      screenshot: this.logs.filter(log => log.type === 'screenshot').length,
-      flag: this.logs.filter(log => log.type === 'flag').length
-=======
-      error: this.logs.filter(
-        log => log.type === 'error' || (log.type === 'console' && log.details?.level === 'error')
-      ).length,
-      screenshot: this.logs.filter(log => log.type === 'screenshot').length,
-      flag: this.logs.filter(log => log.type === 'flag').length,
->>>>>>> origin/main
-    };
-
-    this.updateStatElement('totalEvents', stats.total);
-    this.updateStatElement('clickEvents', stats.click);
-    this.updateStatElement('keyEvents', stats.key);
-    this.updateStatElement('consoleEvents', stats.console);
-    this.updateStatElement('networkEvents', stats.network);
-    this.updateStatElement('networkErrorEvents', stats.networkError);
-    this.updateStatElement('errorEvents', stats.error);
-    this.updateStatElement('screenshotEvents', stats.screenshot);
-    this.updateStatElement('flagEvents', stats.flag);
-  }
-
-  private updateStatElement(id: string, value: number): void {
-    const element = document.getElementById(id);
-    if (element) {
-      element.textContent = value.toString();
+  private getLevelClass(level: string): string {
+    switch (level.toLowerCase()) {
+      case 'error': return 'log-error';
+      case 'warn': return 'log-warn';
+      case 'info': return 'log-info';
+      case 'debug': return 'log-debug';
+      default: return 'log-info';
     }
   }
 
   private async clearLogs(): Promise<void> {
     try {
-      await chrome.runtime.sendMessage({ type: 'CLEAR_LOGS' });
+      await chrome.storage.local.remove('test_logs');
       this.logs = [];
-      this.applyFilters();
-      this.updateStats();
+      this.filteredLogs = [];
+      this.renderLogs();
     } catch (error) {
       console.error('Failed to clear logs:', error);
-      this.showError('ログのクリア中にエラーが発生しました');
     }
   }
 
-  private showError(message: string): void {
-    const logsContent = document.getElementById('logsContent');
-    if (logsContent) {
-      logsContent.innerHTML = `
-        <div class="error">
-          <strong>エラー:</strong> ${this.escapeHtml(message)}
-        </div>
-      `;
-    }
-  }
-
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  private exportLogs(): void {
+    const data = JSON.stringify(this.filteredLogs, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `logs_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
   }
 }
 
-// ページ読み込み時にログビューアを初期化
+// ログビューアを初期化
 document.addEventListener('DOMContentLoaded', () => {
   new LogViewer();
 });

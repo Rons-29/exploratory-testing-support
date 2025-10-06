@@ -209,13 +209,24 @@ export class EventTracker {
     this.eventBuffer = [];
 
     try {
+      // 拡張機能のコンテキストが有効かチェック
+      if (!chrome.runtime?.id) {
+        console.log('EventTracker: Extension context invalidated, skipping event flush');
+        return;
+      }
+
       for (const event of eventsToFlush) {
         await this.sessionManager.addEvent(event);
       }
     } catch (error) {
-      console.error('Failed to flush events:', error);
-      // フラッシュに失敗した場合はバッファに戻す
-      this.eventBuffer.unshift(...eventsToFlush);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Extension context invalidated')) {
+        console.log('EventTracker: Extension context invalidated, skipping event flush');
+      } else {
+        console.error('Failed to flush events:', error);
+        // フラッシュに失敗した場合はバッファに戻す
+        this.eventBuffer.unshift(...eventsToFlush);
+      }
     }
   }
 

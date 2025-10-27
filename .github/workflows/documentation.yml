@@ -76,7 +76,7 @@ jobs:
         done
         
     - name: Upload documentation status
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: documentation-status
         path: doc-status.md
